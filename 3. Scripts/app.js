@@ -1,0 +1,861 @@
+// ============================================================
+// MyRaceCard — app.js
+// ============================================================
+
+// ---- State ----
+let gpxParsed = null;     // { waypoints, trackPoints, filename }
+let checkpoints = null;   // processed checkpoint data array
+let currentTheme = 'default';
+let raceName = '';
+let startMins = 0;
+let targetFinishMins = 0;
+let cutoffFinishMins = null;
+
+
+// ---- DOM References ----
+const dropZone      = document.getElementById('drop-zone');
+const fileInput     = document.getElementById('file-input');
+const stepUpload    = document.getElementById('step-upload');
+const stepSettings  = document.getElementById('step-settings');
+const stepPreview   = document.getElementById('step-preview');
+const gpxFilename   = document.getElementById('gpx-filename');
+const gpxChange     = document.getElementById('gpx-change');
+const raceNameInput = document.getElementById('race-name');
+const startTimeIn   = document.getElementById('start-time');
+const targetHoursIn = document.getElementById('target-hours');
+const targetMinsIn  = document.getElementById('target-mins');
+const cutoffFinIn   = document.getElementById('cutoff-finish');
+const downloadBtn   = document.getElementById('download-btn');
+const editBtn       = document.getElementById('edit-btn');
+const cardOutput    = document.getElementById('card-output');
+const progressFill    = document.getElementById('q-progress-fill');
+const qCounter        = document.getElementById('q-counter');
+const qBack           = document.getElementById('q-back');
+const stepAnalysis    = document.getElementById('step-analysis');
+const stepCheckpoints = document.getElementById('step-checkpoints');
+const analysisBtn     = document.getElementById('analysis-btn');
+
+// Checkpoint selector state
+const MAX_FIT    = 7;   // comfortable max for iPhone screen
+const MIN_SHOW   = 6;   // only show selector if waypoints > this
+let gpxWaypoints = [];  // processed waypoints with leg data
+let selectedCPs  = new Set(); // indices of selected waypoints
+
+// Question flow state
+let currentQ = 0;
+const TOTAL_Q = 4;
+
+// ============================================================
+// GPX Parsing
+// ============================================================
+
+function parseGPX(xmlText) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText, 'text/xml');
+
+  const parseError = doc.querySelector('parsererror');
+  if (parseError) throw new Error('Could not read this GPX file. Make sure it is a valid GPX.');
+
+  // Extract waypoints (checkpoints)
+  const wpts = [...doc.querySelectorAll('wpt')].map(wpt => ({
+    lat:  parseFloat(wpt.getAttribute('lat')),
+    lon:  parseFloat(wpt.getAttribute('lon')),
+    ele:  parseFloat(wpt.querySelector('ele')?.textContent || 0),
+    name: wpt.querySelector('name')?.textContent?.trim() || 'Checkpoint'
+  }));
+
+  // Extract track points (route)
+  const trkpts = [...doc.querySelectorAll('trkpt')].map(pt => ({
+    lat: parseFloat(pt.getAttribute('lat')),
+    lon: parseFloat(pt.getAttribute('lon')),
+    ele: parseFloat(pt.querySelector('ele')?.textContent || 0)
+  }));
+
+  // Try to get a race name from the GPX metadata
+  const gpxName = doc.querySelector('metadata > name, trk > name')?.textContent?.trim() || '';
+
+  if (wpts.length < 2) {
+    throw new Error('No checkpoints found. Your GPX file must include waypoints (at least a start and finish).');
+  }
+
+  if (trkpts.length < 2) {
+    throw new Error('No track data found. Your GPX file must include a track for distance and elevation calculations.');
+  }
+
+  return { waypoints: wpts, trackPoints: trkpts, suggestedName: gpxName };
+}
+
+// ============================================================
+// Distance & Elevation Calculations
+// ============================================================
+
+function haversine(a, b) {
+  const R = 6371;
+  const dLat = (b.lat - a.lat) * Math.PI / 180;
+  const dLon = (b.lon - a.lon) * Math.PI / 180;
+  const s = Math.sin(dLat / 2) ** 2 +
+            Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) *
+            Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(s));
+}
+
+// Build track with cumulative distances at each point
+function buildTrack(trkpts) {
+  const track = [{ ...trkpts[0], cumDist: 0 }];
+  for (let i = 1; i < trkpts.length; i++) {
+    const d = haversine(trkpts[i - 1], trkpts[i]);
+    track.push({ ...trkpts[i], cumDist: track[i - 1].cumDist + d });
+  }
+  return track;
+}
+
+// Find the index of the track point closest to a given waypoint
+function snapWaypoint(wpt, track) {
+  let bestIdx = 0, bestDist = Infinity;
+  for (let i = 0; i < track.length; i++) {
+    const d = haversine(wpt, track[i]);
+    if (d < bestDist) { bestDist = d; bestIdx = i; }
+  }
+  return bestIdx;
+}
+
+// Total elevation gain (ascent only) between two track indices
+function elevGain(track, fromIdx, toIdx) {
+  let gain = 0;
+  for (let i = fromIdx + 1; i <= toIdx; i++) {
+    const diff = track[i].ele - track[i - 1].ele;
+    if (diff > 0) gain += diff;
+  }
+  return Math.round(gain);
+}
+
+// ============================================================
+// Time Calculations (Naismith's Rule)
+// ============================================================
+
+function naismithHours(distKm, ascentM) {
+  return distKm / 5 + ascentM / 600;
+}
+
+function processCheckpoints(gpxData, startM, targetFinM, cutoffFinM) {
+  const { waypoints, trackPoints } = gpxData;
+
+  // Build track with cumulative distances
+  const track = buildTrack(trackPoints);
+
+  // Snap each waypoint to the nearest track point
+  const snapped = waypoints.map(wpt => {
+    const idx = snapWaypoint(wpt, track);
+    return { ...wpt, trackIdx: idx, cumDist: track[idx].cumDist };
+  });
+
+  // Sort waypoints by their position along the track
+  snapped.sort((a, b) => a.cumDist - b.cumDist);
+
+  // Build legs between consecutive waypoints
+  const legs = [];
+  for (let i = 0; i < snapped.length - 1; i++) {
+    const distKm  = snapped[i + 1].cumDist - snapped[i].cumDist;
+    const ascentM = elevGain(track, snapped[i].trackIdx, snapped[i + 1].trackIdx);
+    legs.push({ distKm, ascentM });
+  }
+
+  // Naismith time (hours) per leg
+  const naismiths = legs.map(l => naismithHours(l.distKm, l.ascentM));
+  const totalNaismith = naismiths.reduce((a, b) => a + b, 0);
+
+  if (totalNaismith === 0) throw new Error('Could not calculate route distance. Check your GPX file.');
+
+  // Scale factors — null if that time mode is not provided
+  const scale       = targetFinM != null ? (targetFinM - startM) / 60 / totalNaismith : null;
+  const cutoffScale = cutoffFinM != null ? (cutoffFinM - startM) / 60 / totalNaismith : null;
+
+  // Build checkpoint objects
+  return snapped.map((wpt, i) => {
+    const isStart  = i === 0;
+    const isFinish = i === snapped.length - 1;
+    const type     = isStart ? 'start' : isFinish ? 'finish' : 'cp';
+    const cpNum    = !isStart && !isFinish ? i : null;
+
+    let arrivalMins = scale != null ? startM : null;
+    let cutoffMins  = cutoffScale != null ? startM : null;
+
+    for (let j = 0; j < i; j++) {
+      if (scale != null)       arrivalMins += naismiths[j] * scale * 60;
+      if (cutoffScale != null) cutoffMins  += naismiths[j] * cutoffScale * 60;
+    }
+
+    const leg         = i < legs.length ? legs[i] : null;
+    const legTimeMins = leg && scale != null ? naismiths[i] * scale * 60 : null;
+
+    return {
+      name:       wpt.name,
+      type,
+      cpNum,
+      totalKm:    wpt.cumDist,
+      toNextKm:   leg ? leg.distKm : null,
+      legTimeMins,
+      legAscentM: leg ? leg.ascentM : null,
+      arrivalMins: isStart ? startM : arrivalMins,
+      cutoffMins:  isStart ? null : cutoffMins,
+    };
+  });
+}
+
+// ============================================================
+// Time Formatting
+// ============================================================
+
+function timeToMins(timeStr) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function formatTime(totalMins) {
+  const h = Math.floor(totalMins / 60) % 24;
+  const m = Math.round(totalMins % 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function formatDuration(mins) {
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// ============================================================
+// Card Rendering
+// ============================================================
+
+function getFields() {
+  return {
+    cutoff:  document.getElementById('show-cutoff').checked,
+    total:   document.getElementById('show-total').checked,
+    next:    document.getElementById('show-next').checked,
+    legtime: document.getElementById('show-legtime').checked,
+    climb:   document.getElementById('show-climb').checked,
+  };
+}
+
+function renderRow(cp, isLast, isBeforeFinish, fields) {
+  const dotClass   = `dot-${cp.type}`;
+  const label      = cp.type === 'start' ? 'Start' : cp.type === 'finish' ? 'Finish' : `CP ${cp.cpNum}`;
+  const labelClass = `cp-label-${cp.type}`;
+
+  // Times block
+  let timesHtml = '';
+  if (cp.type === 'start') {
+    timesHtml = `
+      <div class="time-block">
+        <div class="time-lbl">Start time</div>
+        <div class="time-val time-start">${formatTime(cp.arrivalMins)}</div>
+      </div>`;
+  } else {
+    const targetClass  = cp.type === 'finish' ? 'time-finish' : 'time-target';
+    const hasTarget    = cp.arrivalMins != null;
+    const hasCutoff    = fields.cutoff && cp.cutoffMins != null;
+    const hasAnything  = hasTarget || hasCutoff;
+
+    timesHtml = hasAnything ? `
+      ${hasTarget ? `
+      <div class="time-block">
+        <div class="time-lbl">Target</div>
+        <div class="time-val ${targetClass}">${formatTime(cp.arrivalMins)}</div>
+      </div>` : ''}
+      ${hasTarget && hasCutoff ? '<div class="times-divider"></div>' : ''}
+      ${hasCutoff ? `
+      <div class="time-block">
+        <div class="time-lbl">Cutoff</div>
+        <div class="time-val time-cutoff">${formatTime(cp.cutoffMins)}</div>
+      </div>` : ''}` : '';
+  }
+
+  // Stats block (forward-looking: from this CP to next)
+  const stats = [];
+  if (fields.total) {
+    stats.push(`
+      <div class="stat">
+        <div class="stat-lbl">Total</div>
+        <div class="stat-val">${cp.totalKm.toFixed(1)} <span class="stat-unit">km</span></div>
+      </div>`);
+  }
+  if (cp.toNextKm != null) {
+    if (fields.next) {
+      stats.push(`
+        <div class="stat">
+          <div class="stat-lbl">${isBeforeFinish ? 'To Finish' : 'To Next CP'}</div>
+          <div class="stat-val accent">${cp.toNextKm.toFixed(1)} <span class="stat-unit">km</span></div>
+        </div>`);
+    }
+    if (fields.legtime && cp.legTimeMins != null) {
+      stats.push(`
+        <div class="stat">
+          <div class="stat-lbl">Leg Time</div>
+          <div class="stat-val accent">${formatDuration(cp.legTimeMins)}</div>
+        </div>`);
+    }
+    if (fields.climb && cp.legAscentM != null) {
+      stats.push(`
+        <div class="stat">
+          <div class="stat-lbl">Leg Climb</div>
+          <div class="stat-val climb">+${cp.legAscentM} <span class="stat-unit">m</span></div>
+        </div>`);
+    }
+  }
+
+  const statsHtml = stats.length > 0
+    ? `<div class="card-stats">${stats.join('')}</div>`
+    : '';
+
+  return `
+    <div class="row">
+      <div class="timeline">
+        <div class="dot ${dotClass}"></div>
+        ${!isLast ? '<div class="line"></div>' : ''}
+      </div>
+      <div class="card card-${cp.type}">
+        <div class="card-top">
+          <div>
+            <div class="cp-label ${labelClass}">${label}</div>
+            <div class="cp-name">${cp.name}</div>
+          </div>
+          <div class="times">${timesHtml}</div>
+        </div>
+        ${statsHtml}
+      </div>
+    </div>`;
+}
+
+function renderCard() {
+  if (!checkpoints) return;
+  const fields = getFields();
+
+  const rows = checkpoints.map((cp, i) =>
+    renderRow(cp, i === checkpoints.length - 1, i === checkpoints.length - 2, fields)
+  ).join('');
+
+  const totalKm = checkpoints[checkpoints.length - 1].totalKm.toFixed(1);
+  let durationStr = '';
+  if (targetFinishMins != null) {
+    const dH = Math.floor((targetFinishMins - startMins) / 60);
+    const dM = (targetFinishMins - startMins) % 60;
+    durationStr = `&nbsp;·&nbsp; ${dM > 0 ? `${dH}h ${dM}m` : `${dH}h`} target`;
+  }
+
+  cardOutput.innerHTML = `
+    <div class="race-card" data-theme="${currentTheme}">
+      <div class="rc-header">
+        <div class="rc-label">Race Plan</div>
+        <div class="rc-name">${raceName || 'My Race'}</div>
+        <div class="rc-sub">${formatTime(startMins)} start &nbsp;·&nbsp; ${totalKm} km${durationStr}</div>
+      </div>
+      <div class="checkpoints">${rows}</div>
+      <div class="rc-footer">Good luck &nbsp;·&nbsp; myracecard.co.uk</div>
+    </div>`;
+}
+
+// ============================================================
+// Image Download
+// ============================================================
+
+function downloadCard() {
+  const card = cardOutput.querySelector('.race-card');
+  if (!card) return;
+
+  downloadBtn.textContent = 'Generating…';
+  downloadBtn.disabled = true;
+
+  html2canvas(card, {
+    scale: 3,
+    useCORS: true,
+    backgroundColor: null,
+    logging: false,
+  }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `racecard-${(raceName || 'myrace').toLowerCase().replace(/\s+/g, '-')}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }).catch(err => {
+    alert('Could not generate image. Try a different browser if the issue persists.');
+    console.error(err);
+  }).finally(() => {
+    downloadBtn.textContent = '⬇ Download Image';
+    downloadBtn.disabled = false;
+  });
+}
+
+// ============================================================
+// UI Flow
+// ============================================================
+
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorMsg.style.display = 'block';
+}
+
+function hideError() {
+  errorMsg.style.display = 'none';
+}
+
+// ============================================================
+// Question Flow
+// ============================================================
+
+function showQuestion(index, direction = 'forward') {
+  const all = document.querySelectorAll('.question');
+  const current = document.querySelector('.question.active');
+
+  if (current) {
+    current.classList.add('exiting');
+    current.classList.remove('active');
+    setTimeout(() => current.classList.remove('exiting'), 280);
+  }
+
+  all[index].classList.add('active');
+
+  // Focus the input in this question
+  const input = all[index].querySelector('input');
+  if (input) setTimeout(() => input.focus(), 320);
+
+  // Update progress bar and counter
+  const pct = ((index + 1) / TOTAL_Q) * 100;
+  progressFill.style.width = `${pct}%`;
+  qCounter.textContent = `${index + 1} of ${TOTAL_Q}`;
+
+  // Show/hide back button
+  index > 0 ? qBack.classList.remove('hidden') : qBack.classList.add('hidden');
+
+  currentQ = index;
+}
+
+function showQError(index, msg) {
+  const el = document.getElementById(`q-${index}-error`);
+  if (el) { el.textContent = msg; el.style.display = 'block'; }
+}
+
+function hideQError(index) {
+  const el = document.getElementById(`q-${index}-error`);
+  if (el) el.style.display = 'none';
+}
+
+function advanceQuestion(index, skipped = false) {
+  hideQError(index);
+
+  // Validate each question before moving forward
+  if (!skipped) {
+    if (index === 0) {
+      if (!raceNameInput.value.trim()) { showQError(0, 'Please enter a race name.'); return; }
+    }
+    if (index === 1) {
+      if (!startTimeIn.value) { showQError(1, 'Please enter a start time.'); return; }
+    }
+    if (index === 2) {
+      const h = parseInt(targetHoursIn.value, 10);
+      const m = parseInt(targetMinsIn.value, 10);
+      const hasAny = !isNaN(h) || !isNaN(m);
+      if (hasAny) {
+        const dur = (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
+        if (dur <= 0) { showQError(2, 'Duration must be greater than zero.'); return; }
+      }
+    }
+  }
+
+  // Last question — generate the card
+  // Blur any focused input first to prevent browser time-input validation blocking
+  if (index === TOTAL_Q - 1) {
+    document.activeElement?.blur();
+    generateCard();
+    return;
+  }
+
+  showQuestion(index + 1);
+}
+
+function generateCard() {
+  startMins = timeToMins(startTimeIn.value);
+
+  const targetH = parseInt(targetHoursIn.value, 10);
+  const targetM = parseInt(targetMinsIn.value, 10);
+  const hasTarget = !isNaN(targetH) || !isNaN(targetM);
+
+  if (hasTarget) {
+    const dur = (isNaN(targetH) ? 0 : targetH) * 60 + (isNaN(targetM) ? 0 : targetM);
+    targetFinishMins = startMins + dur;
+  } else {
+    targetFinishMins = null;
+  }
+
+  const cutoffStr = cutoffFinIn.value;
+  cutoffFinishMins = cutoffStr ? timeToMins(cutoffStr) : null;
+  if (cutoffFinishMins != null && cutoffFinishMins <= startMins) cutoffFinishMins += 24 * 60;
+
+  if (!targetFinishMins && !cutoffFinishMins) {
+    // Edge case: both skipped — go back to Q3
+    showQError(3, 'Please enter at least a target duration or cutoff time.');
+    showQuestion(2);
+    return;
+  }
+
+  raceName = raceNameInput.value.trim();
+
+  // Filter waypoints by selection (gpxWaypoints is already sorted by track position)
+  const filteredWaypoints = gpxWaypoints.filter((_, i) => selectedCPs.has(i));
+  const filteredGPX = { ...gpxParsed, waypoints: filteredWaypoints };
+
+  try {
+    checkpoints = processCheckpoints(filteredGPX, startMins, targetFinishMins, cutoffFinishMins);
+  } catch (err) {
+    alert(err.message);
+    return;
+  }
+
+  renderCard();
+  stepSettings.classList.add('hidden');
+  stepPreview.classList.remove('hidden');
+}
+
+// ============================================================
+// Checkpoint Selector
+// ============================================================
+
+function processWaypoints(gpxData) {
+  const track   = buildTrack(gpxData.trackPoints);
+  const snapped = gpxData.waypoints.map(wpt => {
+    const idx = snapWaypoint(wpt, track);
+    return { ...wpt, trackIdx: idx, cumDist: track[idx].cumDist };
+  });
+  snapped.sort((a, b) => a.cumDist - b.cumDist);
+
+  return snapped.map((wpt, i) => {
+    const prev      = i > 0 ? snapped[i - 1] : null;
+    const legDistKm = prev ? wpt.cumDist - prev.cumDist : 0;
+    const legAscM   = prev ? elevGain(track, prev.trackIdx, wpt.trackIdx) : 0;
+    // Keep full raw waypoint data so we can re-pass to processCheckpoints
+    return { name: wpt.name, lat: wpt.lat, lon: wpt.lon, ele: wpt.ele, cumDist: wpt.cumDist, trackIdx: wpt.trackIdx, legDistKm, legAscM };
+  });
+}
+
+function suggestedSkips(waypoints) {
+  // Never skip start (0) or finish (last)
+  const skips = new Set();
+  const n = waypoints.length;
+  if (n <= MAX_FIT) return skips;
+
+  const middle = waypoints
+    .slice(1, n - 1)
+    .map((wpt, i) => ({ idx: i + 1, legDistKm: wpt.legDistKm }))
+    .sort((a, b) => a.legDistKm - b.legDistKm);
+
+  const toRemove = n - MAX_FIT;
+  middle.slice(0, toRemove).forEach(m => skips.add(m.idx));
+  return skips;
+}
+
+function updateFitIndicator() {
+  const count     = selectedCPs.size;
+  const indicator = document.getElementById('cp-fit-indicator');
+  const text      = document.getElementById('cp-fit-text');
+
+  indicator.className = 'cp-fit-indicator';
+  if (count <= MAX_FIT) {
+    indicator.classList.add('fit');
+    text.textContent = `${count} selected — fits on screen ✓`;
+  } else if (count <= MAX_FIT + 2) {
+    indicator.classList.add('tight');
+    text.textContent = `${count} selected — might be tight on smaller phones`;
+  } else {
+    indicator.classList.add('over');
+    text.textContent = `${count} selected — too many for one screen`;
+  }
+}
+
+function showCheckpointSelector(waypoints) {
+  const skips  = suggestedSkips(waypoints);
+  const n      = waypoints.length;
+
+  // Default selection: all except suggested skips
+  selectedCPs.clear();
+  waypoints.forEach((_, i) => { if (!skips.has(i)) selectedCPs.add(i); });
+
+  const heading = document.getElementById('cp-selector-heading');
+  heading.textContent = `Your race has ${n} checkpoints`;
+
+  const list = document.getElementById('cp-list');
+  list.innerHTML = '';
+
+  waypoints.forEach((wpt, i) => {
+    const isStart  = i === 0;
+    const isFinish = i === n - 1;
+    const locked   = isStart || isFinish;
+    const isSuggested = skips.has(i);
+    const selected = selectedCPs.has(i);
+
+    const item = document.createElement('div');
+    item.className = 'cp-item' + (locked ? '' : selected ? '' : ' deselected');
+    item.dataset.idx = i;
+
+    const label = isStart ? 'Start' : isFinish ? 'Finish' : `CP ${i}`;
+    const distText = i > 0 ? `${wpt.legDistKm.toFixed(1)} km from previous &nbsp;·&nbsp; ${wpt.cumDist.toFixed(1)} km total` : `Start of race`;
+
+    item.innerHTML = `
+      <button class="cp-item-toggle ${locked ? 'locked' : selected ? 'on' : ''}" data-idx="${i}" ${locked ? 'disabled' : ''}></button>
+      <div class="cp-item-info">
+        <div class="cp-item-name">${label} — ${wpt.name}</div>
+        <div class="cp-item-meta">${distText}</div>
+      </div>
+      ${locked ? `<span class="cp-lock-badge">${isStart ? 'Start' : 'Finish'}</span>` : isSuggested ? '<span class="cp-skip-badge">Close to neighbour</span>' : ''}
+    `;
+
+    if (!locked) {
+      item.querySelector('.cp-item-toggle').addEventListener('click', () => {
+        if (selectedCPs.has(i)) {
+          selectedCPs.delete(i);
+        } else {
+          selectedCPs.add(i);
+        }
+        const toggle = item.querySelector('.cp-item-toggle');
+        toggle.classList.toggle('on', selectedCPs.has(i));
+        item.classList.toggle('deselected', !selectedCPs.has(i));
+        updateFitIndicator();
+      });
+    }
+
+    list.appendChild(item);
+  });
+
+  updateFitIndicator();
+  stepAnalysis.classList.add('hidden');
+  stepCheckpoints.classList.remove('hidden');
+}
+
+// Continue from checkpoint selector
+document.getElementById('cp-continue-btn').addEventListener('click', () => {
+  stepCheckpoints.classList.add('hidden');
+  stepSettings.classList.remove('hidden');
+  currentQ = 0;
+  document.querySelectorAll('.question').forEach(q => q.classList.remove('active', 'exiting'));
+  showQuestion(0);
+});
+
+// ============================================================
+// GPX Analysis Animation
+// ============================================================
+
+function analyseGPX(parsed) {
+  const hasTrack     = parsed.trackPoints.length > 0;
+  const hasElevation = parsed.trackPoints.some(p => p.ele && p.ele !== 0);
+  const hasWaypoints = parsed.waypoints.length > 0;
+  const hasName      = !!parsed.suggestedName;
+
+  return [
+    {
+      label: 'Route track',
+      sub: hasTrack ? `${parsed.trackPoints.length.toLocaleString()} points loaded` : 'No track found — distances unavailable',
+      found: hasTrack,
+    },
+    {
+      label: 'Elevation data',
+      sub: hasElevation ? 'Climb data will appear on your card' : 'Not available — climb stats will be hidden',
+      found: hasElevation,
+    },
+    {
+      label: 'Checkpoints',
+      sub: hasWaypoints ? `${parsed.waypoints.length} checkpoints found` : 'No waypoints — checkpoints unavailable',
+      found: hasWaypoints,
+    },
+    {
+      label: 'Race name',
+      sub: hasName ? `"${parsed.suggestedName}"` : 'Not found — you can enter it manually',
+      found: hasName,
+    },
+  ];
+}
+
+function showAnalysis(parsed) {
+  const items    = analyseGPX(parsed);
+  const listEl   = document.getElementById('analysis-items');
+  const continueEl = document.getElementById('analysis-continue');
+  const fileEl   = document.getElementById('analysis-filename');
+
+  fileEl.textContent = parsed.filename;
+  listEl.innerHTML = '';
+  continueEl.classList.remove('visible');
+
+  // Build item elements (hidden initially)
+  const els = items.map(item => {
+    const div = document.createElement('div');
+    div.className = 'analysis-item';
+    div.innerHTML = `
+      <div class="analysis-icon ${item.found ? 'check' : 'warn'}">
+        <span class="icon-symbol">${item.found ? '✓' : '!'}</span>
+      </div>
+      <div class="analysis-label">
+        <div class="analysis-label-main">${item.label}</div>
+        <div class="analysis-label-sub">${item.sub}</div>
+      </div>
+      <span class="analysis-badge ${item.found ? 'found' : 'missing'}">${item.found ? 'Found' : 'Missing'}</span>
+    `;
+    listEl.appendChild(div);
+    return div;
+  });
+
+  // Animate each item in with staggered delay
+  els.forEach((el, i) => {
+    setTimeout(() => {
+      el.classList.add('visible');
+    }, 400 + i * 500);
+  });
+
+  // Show continue button after all items
+  setTimeout(() => {
+    continueEl.classList.add('visible');
+  }, 400 + items.length * 500 + 200);
+}
+
+// ============================================================
+// GPX Loading
+// ============================================================
+
+function loadGPXFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      gpxParsed = parseGPX(e.target.result);
+      gpxParsed.filename = file.name;
+
+      gpxFilename.textContent = file.name;
+
+      if (gpxParsed.suggestedName && !raceNameInput.value) {
+        raceNameInput.value = gpxParsed.suggestedName;
+      }
+
+      // Show analysis screen
+      appEl.classList.remove('centered');
+      stepUpload.classList.add('hidden');
+      stepAnalysis.classList.remove('hidden');
+      showAnalysis(gpxParsed);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Move from analysis → checkpoint selector (if needed) → questions
+analysisBtn.addEventListener('click', () => {
+  gpxWaypoints = processWaypoints(gpxParsed);
+
+  if (gpxWaypoints.length > MAX_FIT) {
+    showCheckpointSelector(gpxWaypoints);
+  } else {
+    // All checkpoints selected by default
+    selectedCPs.clear();
+    gpxWaypoints.forEach((_, i) => selectedCPs.add(i));
+
+    stepAnalysis.classList.add('hidden');
+    stepSettings.classList.remove('hidden');
+    currentQ = 0;
+    document.querySelectorAll('.question').forEach(q => q.classList.remove('active', 'exiting'));
+    showQuestion(0);
+  }
+});
+
+// ============================================================
+// Event Listeners
+// ============================================================
+
+// File upload
+fileInput.addEventListener('change', e => {
+  if (e.target.files[0]) loadGPXFile(e.target.files[0]);
+});
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.gpx')) {
+    loadGPXFile(file);
+  } else {
+    alert('Please drop a .gpx file.');
+  }
+});
+
+// Change GPX
+gpxChange.addEventListener('click', goHome);
+
+// OK buttons
+document.querySelectorAll('.btn-ok').forEach(btn => {
+  btn.addEventListener('click', () => advanceQuestion(parseInt(btn.dataset.q)));
+});
+
+// Skip buttons
+document.querySelectorAll('.btn-skip').forEach(btn => {
+  btn.addEventListener('click', () => advanceQuestion(parseInt(btn.dataset.q), true));
+});
+
+// Back button
+qBack.addEventListener('click', () => {
+  if (currentQ > 0) showQuestion(currentQ - 1);
+});
+
+// Enter key advances question
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !stepSettings.classList.contains('hidden')) {
+    e.preventDefault();
+    advanceQuestion(currentQ);
+  }
+});
+
+// Theme buttons
+document.querySelectorAll('.theme-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTheme = btn.dataset.theme;
+    renderCard();
+  });
+});
+
+// Field toggles
+['show-cutoff', 'show-total', 'show-next', 'show-legtime', 'show-climb'].forEach(id => {
+  document.getElementById(id).addEventListener('change', renderCard);
+});
+
+// Download
+downloadBtn.addEventListener('click', downloadCard);
+
+// Edit — go back to question 1
+editBtn.addEventListener('click', () => {
+  stepPreview.classList.add('hidden');
+  stepSettings.classList.remove('hidden');
+  showQuestion(0);
+});
+
+// Home button — logo click resets to upload screen
+const appEl = document.getElementById('app');
+
+function goHome() {
+  gpxParsed    = null;
+  checkpoints  = null;
+  gpxWaypoints = [];
+  selectedCPs.clear();
+  fileInput.value = '';
+  stepAnalysis.classList.add('hidden');
+  stepCheckpoints.classList.add('hidden');
+  stepSettings.classList.add('hidden');
+  stepPreview.classList.add('hidden');
+  stepUpload.classList.remove('hidden');
+  appEl.classList.add('centered');
+}
+
+document.getElementById('home-btn').addEventListener('click', goHome);
+

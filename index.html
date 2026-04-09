@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyRaceCard — Generate Your Race Plan</title>
+  <style>
+    /* ========== APP UI STYLES — ARCTIC THEME ========== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --arctic-bg:       #dbeafe;
+      --arctic-panel:    #ffffff;
+      --arctic-border:   #bfdbfe;
+      --arctic-primary:  #2563eb;
+      --arctic-dark:     #1e3a5f;
+      --arctic-body:     #334155;
+      --arctic-muted:    #64748b;
+      --arctic-faint:    #93c5fd;
+      --arctic-light:    #eff6ff;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--arctic-bg);
+      color: var(--arctic-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app {
+      max-width: 640px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 20px 60px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* When only the upload step is visible, fill height and center */
+    .app.centered {
+      justify-content: center;
+    }
+
+    /* Header */
+    .app-header { text-align: center; margin-bottom: 40px; }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--arctic-dark);
+      cursor: pointer;
+      display: inline-block;
+      transition: opacity 0.15s;
+    }
+
+    .logo:hover { opacity: 0.75; }
+
+    .logo span { color: var(--arctic-primary); }
+
+    .tagline {
+      font-size: 14px;
+      color: var(--arctic-muted);
+      margin-top: 5px;
+    }
+
+    .step { margin-bottom: 20px; }
+    .step.hidden { display: none; }
+
+    /* ---- Upload area ---- */
+    .upload-area {
+      border: 2px dashed var(--arctic-faint);
+      border-radius: 20px;
+      background: var(--arctic-panel);
+      padding: 52px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      box-shadow: 0 1px 4px rgba(37,99,235,0.07);
+    }
+
+    .upload-area:hover,
+    .upload-area.drag-over {
+      border-color: var(--arctic-primary);
+      background: var(--arctic-light);
+    }
+
+    .upload-icon { font-size: 38px; margin-bottom: 14px; }
+
+    .upload-text {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--arctic-dark);
+    }
+
+    .upload-sub {
+      font-size: 14px;
+      color: var(--arctic-muted);
+      margin-top: 5px;
+    }
+
+    .upload-link {
+      color: var(--arctic-primary);
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .upload-hint {
+      font-size: 12px;
+      color: var(--arctic-faint);
+      text-align: center;
+      margin-top: 12px;
+    }
+
+
+    /* ---- GPX Analysis screen ---- */
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes checkPop {
+      0%   { transform: scale(0); opacity: 0; }
+      60%  { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); }
+    }
+
+    .analysis-panel {
+      background: var(--arctic-panel);
+      border-radius: 20px;
+      border: 1px solid var(--arctic-border);
+      box-shadow: 0 2px 12px rgba(37,99,235,0.08);
+      padding: 32px 28px 32px;
+    }
+
+    .analysis-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--arctic-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 6px;
+    }
+
+    .analysis-filename {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--arctic-dark);
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .analysis-items {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      margin-bottom: 28px;
+      border: 1px solid var(--arctic-border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .analysis-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+      padding: 14px 16px;
+      background: var(--arctic-panel);
+      border-bottom: 1px solid var(--arctic-border);
+    }
+
+    .analysis-item:last-child { border-bottom: none; }
+
+    .analysis-item.visible {
+      animation: fadeSlideIn 0.35s ease both;
+      opacity: 1;
+    }
+
+    .analysis-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+
+    .analysis-icon.check { background: #dcfce7; color: #16a34a; }
+    .analysis-icon.warn  { background: #fef9c3; color: #ca8a04; }
+
+    .analysis-icon.visible .icon-symbol {
+      animation: checkPop 0.3s ease both;
+      display: inline-block;
+    }
+
+    .analysis-label { flex: 1; }
+
+    .analysis-label-main {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--arctic-dark);
+    }
+
+    .analysis-label-sub {
+      font-size: 12px;
+      color: var(--arctic-muted);
+      margin-top: 2px;
+    }
+
+    .analysis-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.03em;
+    }
+
+    .analysis-badge.found   { background: #dcfce7; color: #16a34a; }
+    .analysis-badge.missing { background: #fef9c3; color: #ca8a04; }
+
+    .analysis-continue {
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .analysis-continue.visible { opacity: 1; }
+
+    /* ---- Checkpoint selector ---- */
+    .cp-selector-panel {
+      background: var(--arctic-panel);
+      border-radius: 20px;
+      border: 1px solid var(--arctic-border);
+      box-shadow: 0 2px 12px rgba(37,99,235,0.08);
+      padding: 28px;
+    }
+
+    .cp-selector-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--arctic-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 6px;
+    }
+
+    .cp-selector-heading {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--arctic-dark);
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .cp-selector-sub {
+      font-size: 13px;
+      color: var(--arctic-muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .cp-fit-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      font-weight: 600;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    .cp-fit-indicator.fit    { background: #dcfce7; color: #16a34a; }
+    .cp-fit-indicator.tight  { background: #fef9c3; color: #ca8a04; }
+    .cp-fit-indicator.over   { background: #fee2e2; color: #dc2626; }
+
+    .cp-fit-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .cp-fit-indicator.fit  .cp-fit-dot  { background: #16a34a; }
+    .cp-fit-indicator.tight .cp-fit-dot { background: #ca8a04; }
+    .cp-fit-indicator.over  .cp-fit-dot { background: #dc2626; }
+
+    .cp-list {
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--arctic-border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 22px;
+    }
+
+    .cp-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--arctic-border);
+      transition: background 0.15s;
+    }
+
+    .cp-item:last-child { border-bottom: none; }
+    .cp-item.disabled   { opacity: 0.5; }
+    .cp-item.deselected { background: #fafafa; }
+    .cp-item.deselected .cp-item-name { color: var(--arctic-muted); text-decoration: line-through; }
+
+    .cp-item-toggle {
+      flex-shrink: 0;
+      width: 36px;
+      height: 20px;
+      background: var(--arctic-border);
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      border: none;
+    }
+
+    .cp-item-toggle.on { background: var(--arctic-primary); }
+    .cp-item-toggle.locked { background: var(--arctic-dark); cursor: default; }
+
+    .cp-item-toggle::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
+    .cp-item-toggle.on::after,
+    .cp-item-toggle.locked::after { transform: translateX(16px); }
+
+    .cp-item-info { flex: 1; min-width: 0; }
+
+    .cp-item-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--arctic-dark);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .cp-item-meta {
+      font-size: 11px;
+      color: var(--arctic-muted);
+      margin-top: 2px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .cp-skip-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: #fef9c3;
+      color: #ca8a04;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .cp-lock-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: var(--arctic-light);
+      color: var(--arctic-primary);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    /* ---- Question flow (Typeform style) ---- */
+    @keyframes slideInUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideOutUp {
+      from { opacity: 1; transform: translateY(0); }
+      to   { opacity: 0; transform: translateY(-28px); }
+    }
+
+    .question-flow {
+      background: var(--arctic-panel);
+      border-radius: 20px;
+      border: 1px solid var(--arctic-border);
+      box-shadow: 0 2px 12px rgba(37,99,235,0.08);
+      overflow: hidden;
+    }
+
+    .q-progress {
+      height: 4px;
+      background: var(--arctic-light);
+    }
+
+    .q-progress-fill {
+      height: 100%;
+      background: var(--arctic-primary);
+      transition: width 0.4s ease;
+    }
+
+    .q-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px 0;
+    }
+
+    .q-back {
+      font-size: 13px;
+      color: var(--arctic-faint);
+      cursor: pointer;
+      background: none;
+      border: none;
+      padding: 4px 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 500;
+    }
+    .q-back:hover { color: var(--arctic-muted); }
+    .q-back.hidden { visibility: hidden; }
+
+    .q-counter {
+      font-size: 12px;
+      color: var(--arctic-muted);
+      font-weight: 600;
+    }
+
+    .q-gpx-tag {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--arctic-primary);
+      background: var(--arctic-light);
+      border: 1px solid var(--arctic-border);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-weight: 600;
+    }
+
+    .questions-wrap {
+      padding: 32px 28px 32px;
+      min-height: 230px;
+      position: relative;
+    }
+
+    .question {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .question.active {
+      display: flex;
+      animation: slideInUp 0.3s ease both;
+    }
+
+    .question.exiting {
+      display: flex;
+      animation: slideOutUp 0.25s ease both;
+      pointer-events: none;
+      position: absolute;
+      width: calc(100% - 56px);
+    }
+
+    .q-text {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--arctic-dark);
+      line-height: 1.3;
+    }
+
+    .q-subtext {
+      font-size: 13px;
+      color: var(--arctic-muted);
+      margin-top: -12px;
+      line-height: 1.5;
+    }
+
+    .q-input {
+      font-size: 18px;
+      color: var(--arctic-dark);
+      border: none;
+      border-bottom: 2px solid var(--arctic-border);
+      padding: 8px 0;
+      outline: none;
+      background: transparent;
+      width: 100%;
+      transition: border-color 0.2s;
+    }
+
+    .q-input:focus { border-bottom-color: var(--arctic-primary); }
+
+    .q-input-time {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--arctic-dark);
+      border: none;
+      border-bottom: 2px solid var(--arctic-border);
+      padding: 8px 0;
+      outline: none;
+      background: transparent;
+      width: 160px;
+      transition: border-color 0.2s;
+    }
+
+    .q-input-time:focus { border-bottom-color: var(--arctic-primary); }
+
+    .q-duration {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .q-duration input[type="number"] {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--arctic-dark);
+      border: none;
+      border-bottom: 2px solid var(--arctic-border);
+      padding: 8px 0;
+      outline: none;
+      background: transparent;
+      width: 70px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+
+    .q-duration input[type="number"]:focus { border-bottom-color: var(--arctic-primary); }
+
+    .q-duration span {
+      font-size: 16px;
+      color: var(--arctic-muted);
+      font-weight: 600;
+    }
+
+    .q-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .btn-ok {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 11px 22px;
+      background: var(--arctic-primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.25);
+    }
+
+    .btn-ok:hover { background: #1d4ed8; }
+    .btn-ok:active { transform: scale(0.97); }
+
+    .btn-skip {
+      font-size: 13px;
+      color: var(--arctic-muted);
+      background: none;
+      border: 1px solid var(--arctic-border);
+      border-radius: 10px;
+      cursor: pointer;
+      padding: 10px 18px;
+      font-weight: 600;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-skip:hover { border-color: var(--arctic-faint); color: var(--arctic-dark); }
+
+    .q-enter-hint {
+      font-size: 12px;
+      color: var(--arctic-faint);
+    }
+
+    .q-error {
+      font-size: 13px;
+      color: #dc2626;
+      display: none;
+    }
+
+    /* Shared buttons */
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: var(--arctic-primary);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 2px 10px rgba(37,99,235,0.25);
+    }
+
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:active { transform: scale(0.98); }
+
+    .btn-download {
+      width: 100%;
+      padding: 14px;
+      background: var(--arctic-dark);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 2px 8px rgba(30,58,95,0.2);
+    }
+
+    .btn-download:hover { background: #0f2341; }
+    .btn-download:active { transform: scale(0.98); }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      color: var(--arctic-muted);
+      border: 1px solid var(--arctic-border);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-secondary:hover { border-color: var(--arctic-faint); color: var(--arctic-dark); }
+
+    /* Preview controls panel */
+    .preview-controls {
+      background: var(--arctic-panel);
+      border-radius: 20px;
+      border: 1px solid var(--arctic-border);
+      box-shadow: 0 2px 12px rgba(37,99,235,0.08);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .control-group label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--arctic-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    .theme-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .theme-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--arctic-border);
+      background: var(--arctic-light);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--arctic-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .theme-btn:hover { border-color: var(--arctic-primary); color: var(--arctic-primary); }
+    .theme-btn.active { background: var(--arctic-primary); color: #fff; border-color: var(--arctic-primary); }
+
+    .field-toggles { display: flex; flex-direction: column; gap: 10px; }
+
+    .toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--arctic-body);
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .toggle input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+      accent-color: var(--arctic-primary);
+    }
+
+    /* Card preview wrapper */
+    .card-preview-wrapper {
+      display: flex;
+      justify-content: center;
+      background: var(--arctic-bg);
+      border-radius: 16px;
+      border: 1px solid var(--arctic-border);
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    /* ========== RACE CARD OUTPUT STYLES ========== */
+    /* These styles are used by the generated card AND captured by html2canvas */
+
+    .race-card {
+      width: 393px;
+      padding: 20px 18px 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* Themes via data-theme attribute */
+    .race-card[data-theme="default"] {
+      --bg: #080d24;
+      --card-bg: #0f1636;
+      --card-border: #1a2550;
+      --line-color: #1a2550;
+      --dot-cp: #4ade80;
+      --dot-start: #22d3ee;
+      --dot-finish: #f59e0b;
+      --text-name: #dde4f0;
+      --text-muted: #4a5a8a;
+      --accent-start: #22d3ee;
+      --accent-cp: #4ade80;
+      --accent-finish: #f59e0b;
+      --time-cutoff: #3a4a6a;
+      --stat-val: #94a3b8;
+      --stat-climb: #fb923c;
+      --stat-accent: #4ade80;
+      --label-cp: #4ade80;
+      --label-start: #22d3ee;
+      --label-finish: #f59e0b;
+      --header-label: #4ade80;
+      --header-name: #ffffff;
+      --header-sub: #4a5a8a;
+      --footer: #2a3560;
+      --start-border: #22d3ee30;
+      --finish-border: #f59e0b30;
+    }
+
+    .race-card[data-theme="arctic"] {
+      --bg: #dbeafe;
+      --card-bg: #ffffff;
+      --card-border: #bfdbfe;
+      --line-color: #bfdbfe;
+      --dot-cp: #2563eb;
+      --dot-start: #0891b2;
+      --dot-finish: #d97706;
+      --text-name: #1e3a5f;
+      --text-muted: #64748b;
+      --accent-start: #0891b2;
+      --accent-cp: #2563eb;
+      --accent-finish: #d97706;
+      --time-cutoff: #94a3b8;
+      --stat-val: #475569;
+      --stat-climb: #ea580c;
+      --stat-accent: #2563eb;
+      --label-cp: #2563eb;
+      --label-start: #0891b2;
+      --label-finish: #d97706;
+      --header-label: #2563eb;
+      --header-name: #0f172a;
+      --header-sub: #64748b;
+      --footer: #94a3b8;
+      --start-border: #0891b230;
+      --finish-border: #d9770630;
+    }
+
+    .race-card[data-theme="forest"] {
+      --bg: #021a02;
+      --card-bg: #051405;
+      --card-border: #0d2e0d;
+      --line-color: #0d2e0d;
+      --dot-cp: #4ade80;
+      --dot-start: #86efac;
+      --dot-finish: #fbbf24;
+      --text-name: #d1fae5;
+      --text-muted: #166534;
+      --accent-start: #86efac;
+      --accent-cp: #4ade80;
+      --accent-finish: #fbbf24;
+      --time-cutoff: #166534;
+      --stat-val: #6ee7b7;
+      --stat-climb: #86efac;
+      --stat-accent: #4ade80;
+      --label-cp: #4ade80;
+      --label-start: #86efac;
+      --label-finish: #fbbf24;
+      --header-label: #4ade80;
+      --header-name: #d1fae5;
+      --header-sub: #166534;
+      --footer: #0d2e0d;
+      --start-border: #86efac30;
+      --finish-border: #fbbf2430;
+    }
+
+    .race-card[data-theme="mono"] {
+      --bg: #000000;
+      --card-bg: #111111;
+      --card-border: #2a2a2a;
+      --line-color: #222222;
+      --dot-cp: #ffffff;
+      --dot-start: #ffffff;
+      --dot-finish: #ffffff;
+      --text-name: #ffffff;
+      --text-muted: #555555;
+      --accent-start: #ffffff;
+      --accent-cp: #ffffff;
+      --accent-finish: #ffffff;
+      --time-cutoff: #444444;
+      --stat-val: #888888;
+      --stat-climb: #bbbbbb;
+      --stat-accent: #ffffff;
+      --label-cp: #aaaaaa;
+      --label-start: #ffffff;
+      --label-finish: #ffffff;
+      --header-label: #888888;
+      --header-name: #ffffff;
+      --header-sub: #555555;
+      --footer: #333333;
+      --start-border: #ffffff20;
+      --finish-border: #ffffff20;
+    }
+
+    .race-card[data-theme="neon"] {
+      --bg: #000000;
+      --card-bg: #050505;
+      --card-border: #00ffff18;
+      --line-color: #001a1a;
+      --dot-cp: #00ffff;
+      --dot-start: #00ffff;
+      --dot-finish: #ff0088;
+      --text-name: #e0ffff;
+      --text-muted: #005555;
+      --accent-start: #00ffff;
+      --accent-cp: #00ffff;
+      --accent-finish: #ff0088;
+      --time-cutoff: #003333;
+      --stat-val: #00aaaa;
+      --stat-climb: #ff4488;
+      --stat-accent: #00ffff;
+      --label-cp: #00ffff;
+      --label-start: #00ffff;
+      --label-finish: #ff0088;
+      --header-label: #00ffff;
+      --header-name: #e0ffff;
+      --header-sub: #005555;
+      --footer: #002020;
+      --start-border: #00ffff20;
+      --finish-border: #ff008820;
+    }
+
+    .race-card[data-theme="sunrise"] {
+      --bg: #1a0a00;
+      --card-bg: #1f1000;
+      --card-border: #3d2000;
+      --line-color: #2d1500;
+      --dot-cp: #f59e0b;
+      --dot-start: #fb923c;
+      --dot-finish: #ef4444;
+      --text-name: #fef3c7;
+      --text-muted: #78350f;
+      --accent-start: #fb923c;
+      --accent-cp: #f59e0b;
+      --accent-finish: #ef4444;
+      --time-cutoff: #44200a;
+      --stat-val: #d97706;
+      --stat-climb: #fb923c;
+      --stat-accent: #f59e0b;
+      --label-cp: #f59e0b;
+      --label-start: #fb923c;
+      --label-finish: #ef4444;
+      --header-label: #f59e0b;
+      --header-name: #fef3c7;
+      --header-sub: #78350f;
+      --footer: #2d1500;
+      --start-border: #fb923c30;
+      --finish-border: #ef444430;
+    }
+
+    /* Card header */
+    .rc-header {
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .rc-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--header-label);
+      margin-bottom: 2px;
+    }
+
+    .rc-name {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--header-name);
+      line-height: 1.2;
+    }
+
+    .rc-sub {
+      font-size: 11px;
+      color: var(--header-sub);
+      margin-top: 2px;
+    }
+
+    /* Checkpoint rows */
+    .checkpoints {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .row {
+      display: flex;
+      align-items: stretch;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .timeline {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 16px;
+      flex-shrink: 0;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 8px;
+    }
+
+    .dot-start {
+      background: var(--dot-start);
+      box-shadow: 0 0 6px var(--dot-start);
+    }
+
+    .dot-cp {
+      background: var(--dot-cp);
+      box-shadow: 0 0 5px var(--dot-cp);
+    }
+
+    .dot-finish {
+      background: var(--dot-finish);
+      box-shadow: 0 0 6px var(--dot-finish);
+      width: 13px;
+      height: 13px;
+    }
+
+    .line {
+      flex: 1;
+      width: 2px;
+      background: var(--line-color);
+      margin: 3px 0;
+      min-height: 8px;
+    }
+
+    /* Cards */
+    .card {
+      flex: 1;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 11px;
+      padding: 7px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .card-start { border-color: var(--start-border); }
+    .card-finish { border-color: var(--finish-border); }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .cp-label {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 1px;
+    }
+
+    .cp-label-start  { color: var(--label-start); }
+    .cp-label-cp     { color: var(--label-cp); }
+    .cp-label-finish { color: var(--label-finish); }
+
+    .cp-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-name);
+      line-height: 1.2;
+      max-width: 140px;
+    }
+
+    .times {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      flex-shrink: 0;
+    }
+
+    .time-block {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .time-lbl {
+      font-size: 8px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      margin-bottom: 1px;
+    }
+
+    .time-val {
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .time-start  { color: var(--accent-start); }
+    .time-target { color: var(--accent-cp); }
+    .time-finish { color: var(--accent-finish); }
+    .time-cutoff { color: var(--time-cutoff); font-size: 13px; }
+
+    .times-divider {
+      width: 1px;
+      height: 26px;
+      background: var(--card-border);
+      align-self: center;
+    }
+
+    /* Stats row */
+    .card-stats {
+      display: flex;
+      border-top: 1px solid var(--card-border);
+      padding-top: 4px;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+    }
+
+    .stat + .stat { border-left: 1px solid var(--card-border); }
+
+    .stat-lbl {
+      font-size: 7.5px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    .stat-val {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--stat-val);
+      line-height: 1.1;
+    }
+
+    .stat-val.accent { color: var(--stat-accent); }
+    .stat-val.climb  { color: var(--stat-climb); }
+
+    .stat-unit {
+      font-size: 8px;
+      font-weight: 400;
+      color: var(--text-muted);
+    }
+
+    /* Footer */
+    .rc-footer {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 10px;
+      color: var(--footer);
+      letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+  <div class="app centered" id="app">
+
+    <header class="app-header">
+      <div class="logo" id="home-btn">My<span>Race</span>Card</div>
+      <p class="tagline">Turn your GPX file into a visual race plan card</p>
+    </header>
+
+    <!-- Step 1: Upload -->
+    <section class="step" id="step-upload">
+      <div class="upload-area" id="drop-zone">
+        <div class="upload-icon">📂</div>
+        <p class="upload-text">Drop your GPX file here</p>
+        <p class="upload-sub">or <label for="file-input" class="upload-link">click to browse</label></p>
+        <input type="file" id="file-input" accept=".gpx" hidden>
+      </div>
+      <p class="upload-hint">Your GPX must include waypoints marking each checkpoint</p>
+    </section>
+
+    <!-- Step 1c: Checkpoint Selector (only shown if >6 checkpoints) -->
+    <section class="step hidden" id="step-checkpoints">
+      <div class="cp-selector-panel">
+        <div class="cp-selector-title">Choose checkpoints</div>
+        <div class="cp-selector-heading" id="cp-selector-heading">Your race has a lot of checkpoints</div>
+        <div class="cp-selector-sub">To fit clearly on a phone screen as a screensaver, we recommend keeping <strong>7 or fewer</strong>. We've pre-selected the most spread out ones — adjust below to your preference.</div>
+        <div class="cp-fit-indicator fit" id="cp-fit-indicator">
+          <div class="cp-fit-dot"></div>
+          <span id="cp-fit-text">7 selected — fits on screen</span>
+        </div>
+        <div class="cp-list" id="cp-list"></div>
+        <button class="btn-primary" id="cp-continue-btn">Continue →</button>
+      </div>
+    </section>
+
+    <!-- Step 1b: GPX Analysis -->
+    <section class="step hidden" id="step-analysis">
+      <div class="analysis-panel">
+        <div class="analysis-title">Reading your GPX file</div>
+        <div class="analysis-filename">📂 <span id="analysis-filename">file.gpx</span></div>
+        <div class="analysis-items" id="analysis-items"></div>
+        <div class="analysis-continue" id="analysis-continue">
+          <button class="btn-primary" id="analysis-btn">Continue →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 2: Settings (question flow) -->
+    <section class="step hidden" id="step-settings">
+      <div class="question-flow">
+
+        <div class="q-progress">
+          <div class="q-progress-fill" id="q-progress-fill" style="width: 25%"></div>
+        </div>
+
+        <div class="q-nav">
+          <button class="q-back hidden" id="q-back">← Back</button>
+          <span class="q-counter" id="q-counter">1 of 4</span>
+          <div class="q-gpx-tag">
+            <span>📂</span>
+            <span id="gpx-filename">file.gpx</span>
+            <span id="gpx-change" style="color:#94a3b8; cursor:pointer; text-decoration:underline; margin-left:4px;">Change</span>
+          </div>
+        </div>
+
+        <div class="questions-wrap">
+
+          <!-- Q1: Race Name -->
+          <div class="question active" id="q-0">
+            <div class="q-text">What's your race called?</div>
+            <input class="q-input" type="text" id="race-name" placeholder="e.g. Pennine Barrier 50" autocomplete="off">
+            <div class="q-error" id="q-0-error">Please enter a race name.</div>
+            <div class="q-actions">
+              <button class="btn-ok" data-q="0">OK ✓</button>
+              <span class="q-enter-hint">or press Enter</span>
+            </div>
+          </div>
+
+          <!-- Q2: Start Time -->
+          <div class="question" id="q-1">
+            <div class="q-text">What time do you start?</div>
+            <input class="q-input-time" type="time" id="start-time" value="06:00">
+            <div class="q-error" id="q-1-error">Please enter a start time.</div>
+            <div class="q-actions">
+              <button class="btn-ok" data-q="1">OK ✓</button>
+              <span class="q-enter-hint">or press Enter</span>
+            </div>
+          </div>
+
+          <!-- Q3: Target Duration -->
+          <div class="question" id="q-2">
+            <div class="q-text">Do you have a target finish time?</div>
+            <div class="q-subtext">Leave blank to skip — the card will show only distances and cutoffs.</div>
+            <div class="q-duration">
+              <input type="number" id="target-hours" min="0" max="99" placeholder="12">
+              <span>h</span>
+              <input type="number" id="target-mins" min="0" max="59" placeholder="30">
+              <span>m</span>
+            </div>
+            <div class="q-error" id="q-2-error">Duration must be greater than zero.</div>
+            <div class="q-actions">
+              <button class="btn-ok" data-q="2">OK ✓</button>
+              <button class="btn-skip" data-q="2">Skip</button>
+            </div>
+          </div>
+
+          <!-- Q4: Cutoff Time -->
+          <div class="question" id="q-3">
+            <div class="q-text">Does your race have a cutoff time?</div>
+            <div class="q-subtext">The time you must finish by. No cutoff? Hit Skip.</div>
+            <input class="q-input-time" type="time" id="cutoff-finish">
+            <div class="q-error" id="q-3-error"></div>
+            <div class="q-actions">
+              <button class="btn-ok" data-q="3">OK ✓</button>
+              <button class="btn-skip" data-q="3">Skip</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 3: Preview -->
+    <section class="step hidden" id="step-preview">
+      <div class="preview-controls">
+        <div class="controls-grid">
+          <div class="control-group">
+            <label>Theme</label>
+            <div class="theme-buttons">
+              <button class="theme-btn active" data-theme="default">Default</button>
+              <button class="theme-btn" data-theme="arctic">Arctic</button>
+              <button class="theme-btn" data-theme="forest">Forest</button>
+              <button class="theme-btn" data-theme="mono">Mono</button>
+              <button class="theme-btn" data-theme="neon">Neon</button>
+              <button class="theme-btn" data-theme="sunrise">Sunrise</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Show Fields</label>
+            <div class="field-toggles">
+              <label class="toggle"><input type="checkbox" id="show-cutoff" checked> Cutoff time</label>
+              <label class="toggle"><input type="checkbox" id="show-total" checked> Total distance</label>
+              <label class="toggle"><input type="checkbox" id="show-next" checked> Distance to next</label>
+              <label class="toggle"><input type="checkbox" id="show-legtime" checked> Leg time</label>
+              <label class="toggle"><input type="checkbox" id="show-climb" checked> Leg climb</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-preview-wrapper">
+        <div id="card-output"></div>
+      </div>
+
+      <button class="btn-download" id="download-btn">⬇ Download Image</button>
+      <button class="btn-secondary" id="edit-btn">Edit Settings</button>
+    </section>
+
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="./3. Scripts/app.js"></script>
+</body>
+</html>
