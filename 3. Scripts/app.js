@@ -3,16 +3,16 @@
 // ============================================================
 
 // ---- State ----
-let gpxParsed = null;     // { waypoints, trackPoints, filename }
-let checkpoints = null;   // processed checkpoint data array
-let currentTheme = 'default';
-let raceName = '';
-let startMins = 0;
-let targetFinishMins = 0;
+let gpxParsed        = null;  // { waypoints, trackPoints, filename }
+let checkpoints      = null;  // processed checkpoint data array
+let currentTheme     = 'default';
+let raceName         = '';
+let startMins        = 0;
+let targetFinishMins = null;
 let cutoffFinishMins = null;
 
-
 // ---- DOM References ----
+const appEl         = document.getElementById('app');
 const dropZone      = document.getElementById('drop-zone');
 const fileInput     = document.getElementById('file-input');
 const stepUpload    = document.getElementById('step-upload');
@@ -28,6 +28,7 @@ const cutoffFinIn   = document.getElementById('cutoff-finish');
 const downloadBtn   = document.getElementById('download-btn');
 const editBtn       = document.getElementById('edit-btn');
 const cardOutput    = document.getElementById('card-output');
+const errorMsg      = document.getElementById('upload-error');
 const progressFill    = document.getElementById('q-progress-fill');
 const qCounter        = document.getElementById('q-counter');
 const qBack           = document.getElementById('q-back');
@@ -37,7 +38,6 @@ const analysisBtn     = document.getElementById('analysis-btn');
 
 // Checkpoint selector state
 const MAX_FIT    = 7;   // comfortable max for iPhone screen
-const MIN_SHOW   = 6;   // only show selector if waypoints > this
 let gpxWaypoints = [];  // processed waypoints with leg data
 let selectedCPs  = new Set(); // indices of selected waypoints
 
@@ -212,7 +212,7 @@ function timeToMins(timeStr) {
 }
 
 function formatTime(totalMins) {
-  const h = Math.floor(totalMins / 60) % 24;
+  const h = Math.floor(totalMins / 60);
   const m = Math.round(totalMins % 60);
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
@@ -371,7 +371,7 @@ function renderCard() {
     if (cardH > screenH) {
       const scale = screenH / cardH;
       card.style.transform = `scale(${scale})`;
-      card.style.transformOrigin = 'top left';
+      card.style.transformOrigin = 'top center';
     }
   });
 }
@@ -387,6 +387,12 @@ function downloadCard() {
   downloadBtn.textContent = 'Generating…';
   downloadBtn.disabled = true;
 
+  // Temporarily remove preview scale so download captures full-size card
+  const savedTransform = card.style.transform;
+  const savedOrigin    = card.style.transformOrigin;
+  card.style.transform = '';
+  card.style.transformOrigin = '';
+
   html2canvas(card, {
     scale: 3,
     useCORS: true,
@@ -401,6 +407,9 @@ function downloadCard() {
     alert('Could not generate image. Try a different browser if the issue persists.');
     console.error(err);
   }).finally(() => {
+    // Restore preview scale
+    card.style.transform = savedTransform;
+    card.style.transformOrigin = savedOrigin;
     downloadBtn.textContent = '⬇ Download Image';
     downloadBtn.disabled = false;
   });
@@ -423,7 +432,7 @@ function hideError() {
 // Question Flow
 // ============================================================
 
-function showQuestion(index, direction = 'forward') {
+function showQuestion(index) {
   const all = document.querySelectorAll('.question');
   const current = document.querySelector('.question.active');
 
@@ -862,15 +871,25 @@ editBtn.addEventListener('click', () => {
   showQuestion(0);
 });
 
-// Home button — logo click resets to upload screen
-const appEl = document.getElementById('app');
+document.getElementById('new-card-btn').addEventListener('click', goHome);
 
+// Home button — logo click resets to upload screen
 function goHome() {
-  gpxParsed    = null;
-  checkpoints  = null;
-  gpxWaypoints = [];
+  gpxParsed        = null;
+  checkpoints      = null;
+  gpxWaypoints     = [];
+  raceName         = '';
+  startMins        = 0;
+  targetFinishMins = null;
+  cutoffFinishMins = null;
   selectedCPs.clear();
-  fileInput.value = '';
+  fileInput.value       = '';
+  raceNameInput.value   = '';
+  startTimeIn.value     = '';
+  targetHoursIn.value   = '';
+  targetMinsIn.value    = '';
+  cutoffFinIn.value     = '';
+  cardOutput.innerHTML  = '';
   stepAnalysis.classList.add('hidden');
   stepCheckpoints.classList.add('hidden');
   stepSettings.classList.add('hidden');

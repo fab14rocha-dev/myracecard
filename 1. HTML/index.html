@@ -753,6 +753,7 @@
       display: flex;
       justify-content: center;
       flex: 1;
+      /* height = phone natural height * scale */
       height: calc((760px + 28px) * 0.72);
       align-items: flex-start;
     }
@@ -839,6 +840,7 @@
     .race-card {
       width: 393px;
       min-height: 760px;
+      /* top padding leaves room for phone's clock in the final image */
       padding: 220px 14px 16px;
       font-family: Arial, Helvetica, sans-serif;
       background: var(--bg);
@@ -1446,6 +1448,6 @@
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  <script src="./3. Scripts/app.js"></script>
+  <script src="../3. Scripts/app.js"></script>
 </body>
 </html>
