@@ -86,6 +86,22 @@ function parseGPX(xmlText) {
 }
 
 // ============================================================
+// Name Cleaning
+// ============================================================
+
+function cleanRaceName(raw) {
+  let name = raw.trim();
+  // Remove 4-digit years
+  name = name.replace(/\b(19|20)\d{2}\b/g, '');
+  // Remove common noise words/suffixes
+  name = name.replace(/\b(route|track|gpx|original|race route|my route|activity|recording)\b/gi, '');
+  // Clean up leftover separators and extra spaces
+  name = name.replace(/[-–—|,]+\s*$/g, '').replace(/^\s*[-–—|,]+/g, '');
+  name = name.replace(/\s{2,}/g, ' ').trim();
+  return name || raw.trim();
+}
+
+// ============================================================
 // Distance & Elevation Calculations
 // ============================================================
 
@@ -486,6 +502,17 @@ function hideQError(index) {
 function advanceQuestion(index, skipped = false) {
   hideQError(index);
 
+  // When skipping, clear the relevant inputs so generateCard doesn't use old values
+  if (skipped) {
+    if (index === 2) {
+      targetHoursIn.value = '';
+      targetMinsIn.value  = '';
+    }
+    if (index === 3) {
+      cutoffFinIn.value = '';
+    }
+  }
+
   // Validate each question before moving forward
   if (!skipped) {
     if (index === 0) {
@@ -501,6 +528,14 @@ function advanceQuestion(index, skipped = false) {
       if (hasAny) {
         const dur = (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
         if (dur <= 0) { showQError(2, 'Duration must be greater than zero.'); return; }
+        // Sanity check: minimum pace of 3 min/km (faster than any trail runner)
+        const totalKm = gpxWaypoints.length > 0 ? gpxWaypoints[gpxWaypoints.length - 1].cumDist : 0;
+        if (totalKm > 0 && dur < totalKm * 3) {
+          const minH = Math.floor(totalKm * 3 / 60);
+          const minM = Math.round(totalKm * 3 % 60);
+          showQError(2, `That's too fast for ${totalKm.toFixed(0)} km. Minimum realistic time is around ${minH}h ${minM > 0 ? minM + 'm' : ''}.`);
+          return;
+        }
       }
     }
   }
@@ -771,7 +806,7 @@ function loadGPXFile(file) {
       gpxFilename.textContent = file.name;
 
       if (gpxParsed.suggestedName && !raceNameInput.value) {
-        raceNameInput.value = gpxParsed.suggestedName;
+        raceNameInput.value = cleanRaceName(gpxParsed.suggestedName);
       }
 
       // Show analysis screen

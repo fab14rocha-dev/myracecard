@@ -146,6 +146,7 @@
       text-transform: uppercase;
       letter-spacing: 0.12em;
       margin-bottom: 6px;
+      text-align: center;
     }
 
     .analysis-filename {
@@ -155,6 +156,7 @@
       margin-bottom: 28px;
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 10px;
     }
 
@@ -423,9 +425,17 @@
 
     .q-nav {
       display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 20px 0;
+    }
+
+    .q-nav-row {
+      display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 14px 20px 0;
+      width: 100%;
     }
 
     .q-back {
@@ -1256,12 +1266,14 @@
         </div>
 
         <div class="q-nav">
-          <button class="q-back hidden" id="q-back">← Back</button>
           <span class="q-counter" id="q-counter">1 of 4</span>
-          <div class="q-gpx-tag">
-            <span>📂</span>
-            <span id="gpx-filename">file.gpx</span>
-            <span id="gpx-change" style="color:#94a3b8; cursor:pointer; text-decoration:underline; margin-left:4px;">Change</span>
+          <div class="q-nav-row">
+            <button class="q-back hidden" id="q-back">← Back</button>
+            <div class="q-gpx-tag">
+              <span>📂</span>
+              <span id="gpx-filename">file.gpx</span>
+              <span id="gpx-change" style="color:#94a3b8; cursor:pointer; text-decoration:underline; margin-left:4px;">Change</span>
+            </div>
           </div>
         </div>
 
@@ -1280,7 +1292,7 @@
 
           <!-- Q2: Start Time -->
           <div class="question" id="q-1">
-            <div class="q-text">What time do you start?</div>
+            <div class="q-text">What time does the race start?</div>
             <input class="q-input-time" type="time" id="start-time" value="06:00">
             <div class="q-error" id="q-1-error">Please enter a start time.</div>
             <div class="q-actions">
