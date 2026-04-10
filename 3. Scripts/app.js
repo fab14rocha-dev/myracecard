@@ -344,14 +344,36 @@ function renderCard() {
 
   cardOutput.innerHTML = `
     <div class="race-card" data-theme="${currentTheme}">
-      <div class="rc-header">
-        <div class="rc-label">Race Plan</div>
-        <div class="rc-name">${raceName || 'My Race'}</div>
-        <div class="rc-sub">${formatTime(startMins)} start &nbsp;·&nbsp; ${totalKm} km${durationStr}</div>
-      </div>
       <div class="checkpoints">${rows}</div>
       <div class="rc-footer">Good luck &nbsp;·&nbsp; myracecard.co.uk</div>
     </div>`;
+
+  // Populate preview-only lockscreen overlay
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const now = new Date();
+  const lsDate = document.getElementById('phone-ls-date');
+  const lsTime = document.getElementById('phone-ls-time');
+  const lsSub  = document.getElementById('phone-ls-sub');
+  if (lsDate) lsDate.textContent = `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]}`;
+  if (lsTime) lsTime.textContent = formatTime(startMins);
+  if (lsSub)  lsSub.textContent  = `${totalKm} km${durationStr ? ' · ' + durationStr.replace(/&nbsp;·&nbsp;/g, '').trim() : ''}`;
+
+  // Scale card to fit phone screen without scrolling (preview only)
+  requestAnimationFrame(() => {
+    const card = cardOutput.querySelector('.race-card');
+    const phoneScreen = document.querySelector('.phone-screen');
+    if (!card || !phoneScreen) return;
+    card.style.transform = '';
+    card.style.transformOrigin = '';
+    const cardH = card.scrollHeight;
+    const screenH = phoneScreen.clientHeight;
+    if (cardH > screenH) {
+      const scale = screenH / cardH;
+      card.style.transform = `scale(${scale})`;
+      card.style.transformOrigin = 'top left';
+    }
+  });
 }
 
 // ============================================================

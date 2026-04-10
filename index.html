@@ -724,15 +724,113 @@
       accent-color: var(--arctic-primary);
     }
 
-    /* Card preview wrapper */
-    .card-preview-wrapper {
+    /* Preview two-column layout */
+    .app:has(#step-preview:not(.hidden)) {
+      max-width: 980px;
+    }
+
+    .preview-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    @media (min-width: 820px) {
+      .preview-layout {
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 40px;
+      }
+      .preview-left {
+        flex: 0 0 280px;
+        position: sticky;
+        top: 24px;
+      }
+    }
+
+    /* Phone mockup — wrapper shrinks to scaled size so layout isn't broken */
+    .phone-mockup {
       display: flex;
       justify-content: center;
-      background: var(--arctic-bg);
-      border-radius: 16px;
-      border: 1px solid var(--arctic-border);
-      padding: 24px;
+      flex: 1;
+      height: calc((760px + 28px) * 0.72);
+      align-items: flex-start;
+    }
+
+    .phone-frame {
+      position: relative;
+      width: 420px;
+      background: linear-gradient(160deg, #2a2a2a, #111);
+      border-radius: 54px;
+      padding: 14px;
+      box-shadow:
+        0 0 0 1px #444,
+        0 40px 100px rgba(0,0,0,0.45),
+        inset 0 0 0 1px #555;
+      flex-shrink: 0;
+      transform: scale(0.72);
+      transform-origin: top center;
+    }
+
+    .phone-side-btn {
+      position: absolute;
+      background: linear-gradient(to bottom, #333, #222);
+      border-radius: 2px;
+    }
+    .phone-side-btn.left  { left: -3px; }
+    .phone-side-btn.right { right: -3px; }
+    .phone-side-btn.silent   { width: 3px; height: 32px; top: 110px; }
+    .phone-side-btn.vol-up   { width: 3px; height: 60px; top: 158px; }
+    .phone-side-btn.vol-down { width: 3px; height: 60px; top: 232px; }
+    .phone-side-btn.power    { width: 3px; height: 80px; top: 185px; }
+
+    .phone-screen {
+      border-radius: 42px;
       overflow: hidden;
+      position: relative;
+      height: 760px;
+    }
+
+    /* Island floats on top */
+    .phone-island {
+      position: absolute;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      width: 126px;
+      height: 36px;
+      background: rgba(0,0,0,0.85);
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+
+    .phone-content {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .phone-home-bar {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      height: 5px;
+      width: 120px;
+      background: rgba(255,255,255,0.3);
+      border-radius: 3px;
+    }
+
+    @media (max-width: 480px) {
+      .phone-mockup {
+        height: calc((760px + 28px) * 0.58);
+      }
+      .phone-frame {
+        transform: scale(0.58);
+        transform-origin: top center;
+      }
     }
 
     /* ========== RACE CARD OUTPUT STYLES ========== */
@@ -740,12 +838,47 @@
 
     .race-card {
       width: 393px;
-      padding: 20px 18px 16px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 760px;
+      padding: 220px 14px 16px;
+      font-family: Arial, Helvetica, sans-serif;
       background: var(--bg);
       display: flex;
       flex-direction: column;
       gap: 0;
+    }
+
+    /* Preview-only lockscreen overlay — floats over the card, NOT captured in download */
+    .phone-ls-overlay {
+      position: absolute;
+      top: 64px;
+      left: 0;
+      right: 0;
+      z-index: 5;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .phone-ls-date {
+      font-size: 16px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.85);
+      text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+    }
+
+    .phone-ls-time {
+      font-size: 76px;
+      font-weight: 200;
+      color: #fff;
+      letter-spacing: -3px;
+      line-height: 1;
+      margin-top: 2px;
+      text-shadow: 0 2px 16px rgba(0,0,0,0.4);
+    }
+
+    .phone-ls-sub {
+      font-size: 12px;
+      color: rgba(255,255,255,0.6);
+      margin-top: 4px;
     }
 
     /* Themes via data-theme attribute */
@@ -1065,6 +1198,8 @@
       font-size: 15px;
       font-weight: 800;
       line-height: 1;
+      font-family: Arial, Helvetica, sans-serif;
+      letter-spacing: 0;
     }
 
     .time-start  { color: var(--accent-start); }
@@ -1251,38 +1386,60 @@
 
     <!-- Step 3: Preview -->
     <section class="step hidden" id="step-preview">
-      <div class="preview-controls">
-        <div class="controls-grid">
-          <div class="control-group">
-            <label>Theme</label>
-            <div class="theme-buttons">
-              <button class="theme-btn active" data-theme="default">Default</button>
-              <button class="theme-btn" data-theme="arctic">Arctic</button>
-              <button class="theme-btn" data-theme="forest">Forest</button>
-              <button class="theme-btn" data-theme="mono">Mono</button>
-              <button class="theme-btn" data-theme="neon">Neon</button>
-              <button class="theme-btn" data-theme="sunrise">Sunrise</button>
+      <div class="preview-layout">
+
+        <div class="preview-left">
+          <div class="preview-controls">
+            <div class="controls-grid">
+              <div class="control-group">
+                <label>Theme</label>
+                <div class="theme-buttons">
+                  <button class="theme-btn active" data-theme="default">Default</button>
+                  <button class="theme-btn" data-theme="arctic">Arctic</button>
+                  <button class="theme-btn" data-theme="forest">Forest</button>
+                  <button class="theme-btn" data-theme="mono">Mono</button>
+                  <button class="theme-btn" data-theme="neon">Neon</button>
+                  <button class="theme-btn" data-theme="sunrise">Sunrise</button>
+                </div>
+              </div>
+              <div class="control-group">
+                <label>Show Fields</label>
+                <div class="field-toggles">
+                  <label class="toggle"><input type="checkbox" id="show-cutoff" checked> Cutoff time</label>
+                  <label class="toggle"><input type="checkbox" id="show-total" checked> Total distance</label>
+                  <label class="toggle"><input type="checkbox" id="show-next" checked> Distance to next</label>
+                  <label class="toggle"><input type="checkbox" id="show-legtime" checked> Leg time</label>
+                  <label class="toggle"><input type="checkbox" id="show-climb" checked> Leg climb</label>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="control-group">
-            <label>Show Fields</label>
-            <div class="field-toggles">
-              <label class="toggle"><input type="checkbox" id="show-cutoff" checked> Cutoff time</label>
-              <label class="toggle"><input type="checkbox" id="show-total" checked> Total distance</label>
-              <label class="toggle"><input type="checkbox" id="show-next" checked> Distance to next</label>
-              <label class="toggle"><input type="checkbox" id="show-legtime" checked> Leg time</label>
-              <label class="toggle"><input type="checkbox" id="show-climb" checked> Leg climb</label>
+          <button class="btn-download" id="download-btn">⬇ Download Image</button>
+          <button class="btn-secondary" id="edit-btn">Edit Settings</button>
+        </div>
+
+        <div class="phone-mockup">
+          <div class="phone-frame">
+            <div class="phone-side-btn left silent"></div>
+            <div class="phone-side-btn left vol-up"></div>
+            <div class="phone-side-btn left vol-down"></div>
+            <div class="phone-side-btn right power"></div>
+            <div class="phone-screen">
+              <div class="phone-island"></div>
+              <div class="phone-ls-overlay">
+                <div class="phone-ls-date" id="phone-ls-date"></div>
+                <div class="phone-ls-time" id="phone-ls-time"></div>
+                <div class="phone-ls-sub" id="phone-ls-sub"></div>
+              </div>
+              <div class="phone-content">
+                <div id="card-output"></div>
+              </div>
+              <div class="phone-home-bar"></div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="card-preview-wrapper">
-        <div id="card-output"></div>
       </div>
-
-      <button class="btn-download" id="download-btn">⬇ Download Image</button>
-      <button class="btn-secondary" id="edit-btn">Edit Settings</button>
     </section>
 
   </div>
