@@ -903,9 +903,7 @@
       --text-muted: #4a5a8a;
       --accent-start: #22d3ee;
       --accent-cp: #4ade80;
-      --accent-finish: #f59e0b;
-      --time-cutoff: #3a4a6a;
-      --stat-val: #94a3b8;
+      --accent-finish: #f59e0b;      --stat-val: #94a3b8;
       --stat-climb: #fb923c;
       --stat-accent: #4ade80;
       --label-cp: #4ade80;
@@ -927,9 +925,7 @@
       --text-muted: #64748b;
       --accent-start: #0891b2;
       --accent-cp: #2563eb;
-      --accent-finish: #d97706;
-      --time-cutoff: #94a3b8;
-      --stat-val: #475569;
+      --accent-finish: #d97706;      --stat-val: #475569;
       --stat-climb: #ea580c;
       --stat-accent: #2563eb;
       --label-cp: #2563eb;
@@ -951,9 +947,7 @@
       --text-muted: #166534;
       --accent-start: #86efac;
       --accent-cp: #4ade80;
-      --accent-finish: #fbbf24;
-      --time-cutoff: #166534;
-      --stat-val: #6ee7b7;
+      --accent-finish: #fbbf24;      --stat-val: #6ee7b7;
       --stat-climb: #86efac;
       --stat-accent: #4ade80;
       --label-cp: #4ade80;
@@ -975,9 +969,7 @@
       --text-muted: #555555;
       --accent-start: #ffffff;
       --accent-cp: #ffffff;
-      --accent-finish: #ffffff;
-      --time-cutoff: #444444;
-      --stat-val: #888888;
+      --accent-finish: #ffffff;      --stat-val: #888888;
       --stat-climb: #bbbbbb;
       --stat-accent: #ffffff;
       --label-cp: #aaaaaa;
@@ -999,9 +991,7 @@
       --text-muted: #005555;
       --accent-start: #00ffff;
       --accent-cp: #00ffff;
-      --accent-finish: #ff0088;
-      --time-cutoff: #003333;
-      --stat-val: #00aaaa;
+      --accent-finish: #ff0088;      --stat-val: #00aaaa;
       --stat-climb: #ff4488;
       --stat-accent: #00ffff;
       --label-cp: #00ffff;
@@ -1023,9 +1013,7 @@
       --text-muted: #78350f;
       --accent-start: #fb923c;
       --accent-cp: #f59e0b;
-      --accent-finish: #ef4444;
-      --time-cutoff: #44200a;
-      --stat-val: #d97706;
+      --accent-finish: #ef4444;      --stat-val: #d97706;
       --stat-climb: #fb923c;
       --stat-accent: #f59e0b;
       --label-cp: #f59e0b;
@@ -1153,7 +1141,6 @@
     .time-start  { color: var(--accent-start); }
     .time-target { color: var(--accent-cp); }
     .time-finish { color: var(--accent-finish); }
-    .time-cutoff { color: var(--time-cutoff); font-size: 13px; }
 
     .times-divider {
       width: 1px;
@@ -1304,7 +1291,7 @@
           <!-- Q3: Target Duration -->
           <div class="question" id="q-2">
             <div class="q-text">Do you have a target finish time?</div>
-            <div class="q-subtext">Leave blank to skip — the card will show only distances and cutoffs.</div>
+            <div class="q-subtext">Leave blank to skip — the card will show only distances.</div>
             <div class="q-duration">
               <input type="number" id="target-hours" min="0" max="99" placeholder="12">
               <span>h</span>
@@ -1315,18 +1302,6 @@
             <div class="q-actions">
               <button class="btn-ok" data-q="2">OK ✓</button>
               <button class="btn-skip" data-q="2">Skip</button>
-            </div>
-          </div>
-
-          <!-- Q4: Cutoff Time -->
-          <div class="question" id="q-3">
-            <div class="q-text">Does your race have a cutoff time?</div>
-            <div class="q-subtext">The time you must finish by. No cutoff? Hit Skip.</div>
-            <input class="q-input-time" type="time" id="cutoff-finish">
-            <div class="q-error" id="q-3-error"></div>
-            <div class="q-actions">
-              <button class="btn-ok" data-q="3">OK ✓</button>
-              <button class="btn-skip" data-q="3">Skip</button>
             </div>
           </div>
 
@@ -1355,7 +1330,6 @@
               <div class="control-group">
                 <label>Show Fields</label>
                 <div class="field-toggles">
-                  <label class="toggle"><input type="checkbox" id="show-cutoff" checked> Cutoff time</label>
                   <label class="toggle"><input type="checkbox" id="show-total" checked> Total distance</label>
                   <label class="toggle"><input type="checkbox" id="show-next" checked> Distance to next</label>
                   <label class="toggle"><input type="checkbox" id="show-legtime" checked> Leg time</label>

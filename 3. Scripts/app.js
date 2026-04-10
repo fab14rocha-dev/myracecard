@@ -9,7 +9,6 @@ let currentTheme     = 'default';
 let raceName         = '';
 let startMins        = 0;
 let targetFinishMins = null;
-let cutoffFinishMins = null;
 
 // ---- DOM References ----
 const appEl         = document.getElementById('app');
@@ -24,7 +23,6 @@ const raceNameInput = document.getElementById('race-name');
 const startTimeIn   = document.getElementById('start-time');
 const targetHoursIn = document.getElementById('target-hours');
 const targetMinsIn  = document.getElementById('target-mins');
-const cutoffFinIn   = document.getElementById('cutoff-finish');
 const downloadBtn   = document.getElementById('download-btn');
 const editBtn       = document.getElementById('edit-btn');
 const cardOutput    = document.getElementById('card-output');
@@ -43,7 +41,7 @@ let selectedCPs  = new Set(); // indices of selected waypoints
 
 // Question flow state
 let currentQ = 0;
-const TOTAL_Q = 4;
+const TOTAL_Q = 3;
 
 // ============================================================
 // GPX Parsing
@@ -153,7 +151,7 @@ function naismithHours(distKm, ascentM) {
   return distKm / 5 + ascentM / 600;
 }
 
-function processCheckpoints(gpxData, startM, targetFinM, cutoffFinM) {
+function processCheckpoints(gpxData, startM, targetFinM) {
   const { waypoints, trackPoints } = gpxData;
 
   // Build track with cumulative distances
@@ -182,9 +180,7 @@ function processCheckpoints(gpxData, startM, targetFinM, cutoffFinM) {
 
   if (totalNaismith === 0) throw new Error('Could not calculate route distance. Check your GPX file.');
 
-  // Scale factors — null if that time mode is not provided
-  const scale       = targetFinM != null ? (targetFinM - startM) / 60 / totalNaismith : null;
-  const cutoffScale = cutoffFinM != null ? (cutoffFinM - startM) / 60 / totalNaismith : null;
+  const scale = targetFinM != null ? (targetFinM - startM) / 60 / totalNaismith : null;
 
   // Build checkpoint objects
   return snapped.map((wpt, i) => {
@@ -194,11 +190,8 @@ function processCheckpoints(gpxData, startM, targetFinM, cutoffFinM) {
     const cpNum    = !isStart && !isFinish ? i : null;
 
     let arrivalMins = scale != null ? startM : null;
-    let cutoffMins  = cutoffScale != null ? startM : null;
-
     for (let j = 0; j < i; j++) {
-      if (scale != null)       arrivalMins += naismiths[j] * scale * 60;
-      if (cutoffScale != null) cutoffMins  += naismiths[j] * cutoffScale * 60;
+      if (scale != null) arrivalMins += naismiths[j] * scale * 60;
     }
 
     const leg         = i < legs.length ? legs[i] : null;
@@ -213,7 +206,6 @@ function processCheckpoints(gpxData, startM, targetFinM, cutoffFinM) {
       legTimeMins,
       legAscentM: leg ? leg.ascentM : null,
       arrivalMins: isStart ? startM : arrivalMins,
-      cutoffMins:  isStart ? null : cutoffMins,
     };
   });
 }
@@ -245,7 +237,6 @@ function formatDuration(mins) {
 
 function getFields() {
   return {
-    cutoff:  document.getElementById('show-cutoff').checked,
     total:   document.getElementById('show-total').checked,
     next:    document.getElementById('show-next').checked,
     legtime: document.getElementById('show-legtime').checked,
@@ -266,23 +257,14 @@ function renderRow(cp, isBeforeFinish, fields) {
         <div class="time-val time-start">${formatTime(cp.arrivalMins)}</div>
       </div>`;
   } else {
-    const targetClass  = cp.type === 'finish' ? 'time-finish' : 'time-target';
-    const hasTarget    = cp.arrivalMins != null;
-    const hasCutoff    = fields.cutoff && cp.cutoffMins != null;
-    const hasAnything  = hasTarget || hasCutoff;
+    const targetClass = cp.type === 'finish' ? 'time-finish' : 'time-target';
+    const hasTarget   = cp.arrivalMins != null;
 
-    timesHtml = hasAnything ? `
-      ${hasTarget ? `
+    timesHtml = hasTarget ? `
       <div class="time-block">
         <div class="time-lbl">Target</div>
         <div class="time-val ${targetClass}">${formatTime(cp.arrivalMins)}</div>
-      </div>` : ''}
-      ${hasTarget && hasCutoff ? '<div class="times-divider"></div>' : ''}
-      ${hasCutoff ? `
-      <div class="time-block">
-        <div class="time-lbl">Cutoff</div>
-        <div class="time-val time-cutoff">${formatTime(cp.cutoffMins)}</div>
-      </div>` : ''}` : '';
+      </div>` : '';
   }
 
   // Stats block (forward-looking: from this CP to next)
@@ -509,7 +491,6 @@ function advanceQuestion(index, skipped = false) {
       targetMinsIn.value  = '';
     }
     if (index === 3) {
-      cutoffFinIn.value = '';
     }
   }
 
@@ -566,17 +547,6 @@ function generateCard() {
     targetFinishMins = null;
   }
 
-  const cutoffStr = cutoffFinIn.value;
-  cutoffFinishMins = cutoffStr ? timeToMins(cutoffStr) : null;
-  if (cutoffFinishMins != null && cutoffFinishMins <= startMins) cutoffFinishMins += 24 * 60;
-
-  if (!targetFinishMins && !cutoffFinishMins) {
-    // Edge case: both skipped — go back to Q3
-    showQError(3, 'Please enter at least a target duration or cutoff time.');
-    showQuestion(2);
-    return;
-  }
-
   raceName = raceNameInput.value.trim();
 
   // Filter waypoints by selection (gpxWaypoints is already sorted by track position)
@@ -584,7 +554,7 @@ function generateCard() {
   const filteredGPX = { ...gpxParsed, waypoints: filteredWaypoints };
 
   try {
-    checkpoints = processCheckpoints(filteredGPX, startMins, targetFinishMins, cutoffFinishMins);
+    checkpoints = processCheckpoints(filteredGPX, startMins, targetFinishMins);
   } catch (err) {
     alert(err.message);
     return;
@@ -907,7 +877,7 @@ document.querySelectorAll('.theme-btn').forEach(btn => {
 });
 
 // Field toggles
-['show-cutoff', 'show-total', 'show-next', 'show-legtime', 'show-climb'].forEach(id => {
+['show-total', 'show-next', 'show-legtime', 'show-climb'].forEach(id => {
   document.getElementById(id).addEventListener('change', renderCard);
 });
 
@@ -931,14 +901,12 @@ function goHome() {
   raceName         = '';
   startMins        = 0;
   targetFinishMins = null;
-  cutoffFinishMins = null;
   selectedCPs.clear();
   fileInput.value       = '';
   raceNameInput.value   = '';
   startTimeIn.value     = '';
   targetHoursIn.value   = '';
   targetMinsIn.value    = '';
-  cutoffFinIn.value     = '';
   cardOutput.innerHTML  = '';
   stepAnalysis.classList.add('hidden');
   stepCheckpoints.classList.add('hidden');
