@@ -237,8 +237,7 @@ function getFields() {
   };
 }
 
-function renderRow(cp, isLast, isBeforeFinish, fields) {
-  const dotClass   = `dot-${cp.type}`;
+function renderRow(cp, isBeforeFinish, fields) {
   const label      = cp.type === 'start' ? 'Start' : cp.type === 'finish' ? 'Finish' : `CP ${cp.cpNum}`;
   const labelClass = `cp-label-${cp.type}`;
 
@@ -309,15 +308,11 @@ function renderRow(cp, isLast, isBeforeFinish, fields) {
 
   return `
     <div class="row">
-      <div class="timeline">
-        <div class="dot ${dotClass}"></div>
-        ${!isLast ? '<div class="line"></div>' : ''}
-      </div>
       <div class="card card-${cp.type}">
         <div class="card-top">
           <div>
             <div class="cp-label ${labelClass}">${label}</div>
-            <div class="cp-name">${cp.name}</div>
+            <div class="cp-name">${cp.name.replace(/^checkpoint\s*\d*\s*[-–—:,]?\s*/i, '').trim() || cp.name}</div>
           </div>
           <div class="times">${timesHtml}</div>
         </div>
@@ -331,7 +326,7 @@ function renderCard() {
   const fields = getFields();
 
   const rows = checkpoints.map((cp, i) =>
-    renderRow(cp, i === checkpoints.length - 1, i === checkpoints.length - 2, fields)
+    renderRow(cp, i === checkpoints.length - 2, fields)
   ).join('');
 
   const totalKm = checkpoints[checkpoints.length - 1].totalKm.toFixed(1);
@@ -363,7 +358,15 @@ function renderCard() {
   requestAnimationFrame(() => {
     const card = cardOutput.querySelector('.race-card');
     const phoneScreen = document.querySelector('.phone-screen');
+    const phoneContent = document.querySelector('.phone-content');
     if (!card || !phoneScreen) return;
+
+    // Match phone-content background to card so scaled-down gaps are invisible
+    if (phoneContent) {
+      const bg = getComputedStyle(card).backgroundColor;
+      phoneContent.style.background = bg;
+    }
+
     card.style.transform = '';
     card.style.transformOrigin = '';
     const cardH = card.scrollHeight;
@@ -393,25 +396,36 @@ function downloadCard() {
   card.style.transform = '';
   card.style.transformOrigin = '';
 
-  html2canvas(card, {
-    scale: 3,
-    useCORS: true,
-    backgroundColor: null,
-    logging: false,
-  }).then(canvas => {
-    const link = document.createElement('a');
-    link.download = `racecard-${(raceName || 'myrace').toLowerCase().replace(/\s+/g, '-')}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-  }).catch(err => {
-    alert('Could not generate image. Try a different browser if the issue persists.');
-    console.error(err);
-  }).finally(() => {
-    // Restore preview scale
-    card.style.transform = savedTransform;
-    card.style.transformOrigin = savedOrigin;
-    downloadBtn.textContent = '⬇ Download Image';
-    downloadBtn.disabled = false;
+  document.fonts.load('700 12px Inter').then(() => {
+    return document.fonts.ready;
+  }).then(() => {
+    html2canvas(card, {
+      scale: 3,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: null,
+      logging: false,
+      onclone: (_doc, el) => {
+        // html2canvas misrenders letter-spacing — flatten it before capture
+        el.querySelectorAll('*').forEach(node => {
+          node.style.letterSpacing = 'normal';
+        });
+      },
+    }).then(canvas => {
+      const link = document.createElement('a');
+      link.download = `racecard-${(raceName || 'myrace').toLowerCase().replace(/\s+/g, '-')}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }).catch(err => {
+      alert('Could not generate image. Try a different browser if the issue persists.');
+      console.error(err);
+    }).finally(() => {
+      // Restore preview scale
+      card.style.transform = savedTransform;
+      card.style.transformOrigin = savedOrigin;
+      downloadBtn.textContent = '⬇ Download Image';
+      downloadBtn.disabled = false;
+    });
   });
 }
 

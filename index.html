@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MyRaceCard — Generate Your Race Plan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     /* ========== APP UI STYLES — ARCTIC THEME ========== */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -840,7 +843,7 @@
       width: 393px;
       min-height: 760px;
       padding: 220px 14px 16px;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: 'Inter', Arial, sans-serif;
       background: var(--bg);
       display: flex;
       flex-direction: column;
@@ -886,10 +889,6 @@
       --bg: #080d24;
       --card-bg: #0f1636;
       --card-border: #1a2550;
-      --line-color: #1a2550;
-      --dot-cp: #4ade80;
-      --dot-start: #22d3ee;
-      --dot-finish: #f59e0b;
       --text-name: #dde4f0;
       --text-muted: #4a5a8a;
       --accent-start: #22d3ee;
@@ -914,10 +913,6 @@
       --bg: #dbeafe;
       --card-bg: #ffffff;
       --card-border: #bfdbfe;
-      --line-color: #bfdbfe;
-      --dot-cp: #2563eb;
-      --dot-start: #0891b2;
-      --dot-finish: #d97706;
       --text-name: #1e3a5f;
       --text-muted: #64748b;
       --accent-start: #0891b2;
@@ -942,10 +937,6 @@
       --bg: #021a02;
       --card-bg: #051405;
       --card-border: #0d2e0d;
-      --line-color: #0d2e0d;
-      --dot-cp: #4ade80;
-      --dot-start: #86efac;
-      --dot-finish: #fbbf24;
       --text-name: #d1fae5;
       --text-muted: #166534;
       --accent-start: #86efac;
@@ -970,10 +961,6 @@
       --bg: #000000;
       --card-bg: #111111;
       --card-border: #2a2a2a;
-      --line-color: #222222;
-      --dot-cp: #ffffff;
-      --dot-start: #ffffff;
-      --dot-finish: #ffffff;
       --text-name: #ffffff;
       --text-muted: #555555;
       --accent-start: #ffffff;
@@ -998,10 +985,6 @@
       --bg: #000000;
       --card-bg: #050505;
       --card-border: #00ffff18;
-      --line-color: #001a1a;
-      --dot-cp: #00ffff;
-      --dot-start: #00ffff;
-      --dot-finish: #ff0088;
       --text-name: #e0ffff;
       --text-muted: #005555;
       --accent-start: #00ffff;
@@ -1026,10 +1009,6 @@
       --bg: #1a0a00;
       --card-bg: #1f1000;
       --card-border: #3d2000;
-      --line-color: #2d1500;
-      --dot-cp: #f59e0b;
-      --dot-start: #fb923c;
-      --dot-finish: #ef4444;
       --text-name: #fef3c7;
       --text-muted: #78350f;
       --accent-start: #fb923c;
@@ -1089,47 +1068,6 @@
       align-items: stretch;
       gap: 10px;
       margin-bottom: 6px;
-    }
-
-    .timeline {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      width: 16px;
-      flex-shrink: 0;
-    }
-
-    .dot {
-      width: 11px;
-      height: 11px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      margin-top: 8px;
-    }
-
-    .dot-start {
-      background: var(--dot-start);
-      box-shadow: 0 0 6px var(--dot-start);
-    }
-
-    .dot-cp {
-      background: var(--dot-cp);
-      box-shadow: 0 0 5px var(--dot-cp);
-    }
-
-    .dot-finish {
-      background: var(--dot-finish);
-      box-shadow: 0 0 6px var(--dot-finish);
-      width: 13px;
-      height: 13px;
-    }
-
-    .line {
-      flex: 1;
-      width: 2px;
-      background: var(--line-color);
-      margin: 3px 0;
-      min-height: 8px;
     }
 
     /* Cards */
@@ -1198,7 +1136,7 @@
       font-size: 15px;
       font-weight: 700;
       line-height: 1;
-      font-family: Arial, Helvetica, sans-serif;
+      font-family: 'Inter', Arial, sans-serif;
       letter-spacing: 0;
     }
 
