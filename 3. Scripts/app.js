@@ -166,11 +166,19 @@ function processCheckpoints(gpxData, startM, targetFinM) {
   // Sort waypoints by their position along the track
   snapped.sort((a, b) => a.cumDist - b.cumDist);
 
+  // Remove duplicate waypoints that snapped to the same track position
+  // (e.g. two GPX waypoints at the same geographic location — keep first)
+  const deduped = snapped.filter((wpt, i) =>
+    i === 0 || wpt.cumDist !== snapped[i - 1].cumDist
+  );
+
+  if (deduped.length < 2) throw new Error('Not enough distinct checkpoints after removing duplicates. Check your GPX file.');
+
   // Build legs between consecutive waypoints
   const legs = [];
-  for (let i = 0; i < snapped.length - 1; i++) {
-    const distKm  = snapped[i + 1].cumDist - snapped[i].cumDist;
-    const ascentM = elevGain(track, snapped[i].trackIdx, snapped[i + 1].trackIdx);
+  for (let i = 0; i < deduped.length - 1; i++) {
+    const distKm  = deduped[i + 1].cumDist - deduped[i].cumDist;
+    const ascentM = elevGain(track, deduped[i].trackIdx, deduped[i + 1].trackIdx);
     legs.push({ distKm, ascentM });
   }
 
@@ -183,9 +191,9 @@ function processCheckpoints(gpxData, startM, targetFinM) {
   const scale = targetFinM != null ? (targetFinM - startM) / 60 / totalNaismith : null;
 
   // Build checkpoint objects
-  return snapped.map((wpt, i) => {
+  return deduped.map((wpt, i) => {
     const isStart  = i === 0;
-    const isFinish = i === snapped.length - 1;
+    const isFinish = i === deduped.length - 1;
     const type     = isStart ? 'start' : isFinish ? 'finish' : 'cp';
     const cpNum    = !isStart && !isFinish ? i : null;
 
@@ -197,6 +205,10 @@ function processCheckpoints(gpxData, startM, targetFinM) {
     const leg         = i < legs.length ? legs[i] : null;
     const legTimeMins = leg && scale != null ? naismiths[i] * scale * 60 : null;
 
+    const totalAscentM = isFinish
+      ? legs.reduce((sum, l) => sum + l.ascentM, 0)
+      : null;
+
     return {
       name:       wpt.name,
       type,
@@ -206,6 +218,7 @@ function processCheckpoints(gpxData, startM, targetFinM) {
       legTimeMins,
       legAscentM: leg ? leg.ascentM : null,
       arrivalMins: isStart ? startM : arrivalMins,
+      totalAscentM,
     };
   });
 }
@@ -226,8 +239,9 @@ function formatTime(totalMins) {
 }
 
 function formatDuration(mins) {
-  const h = Math.floor(mins / 60);
-  const m = Math.round(mins % 60);
+  const total = Math.round(mins);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
@@ -267,36 +281,62 @@ function renderRow(cp, isBeforeFinish, fields) {
       </div>` : '';
   }
 
-  // Stats block (forward-looking: from this CP to next)
+  // Stats block
   const stats = [];
-  if (fields.total) {
+
+  if (cp.type === 'finish') {
+    // Finish card always shows race summary
     stats.push(`
       <div class="stat">
         <div class="stat-lbl">Total</div>
         <div class="stat-val">${cp.totalKm.toFixed(1)} <span class="stat-unit">km</span></div>
       </div>`);
-  }
-  if (cp.toNextKm != null) {
-    if (fields.next) {
+    if (cp.totalAscentM != null) {
       stats.push(`
         <div class="stat">
-          <div class="stat-lbl">${isBeforeFinish ? 'To Finish' : 'To Next CP'}</div>
-          <div class="stat-val accent">${cp.toNextKm.toFixed(1)} <span class="stat-unit">km</span></div>
+          <div class="stat-lbl">Total Climb</div>
+          <div class="stat-val climb">+${Math.round(cp.totalAscentM)} <span class="stat-unit">m</span></div>
         </div>`);
     }
-    if (fields.legtime && cp.legTimeMins != null) {
+    if (cp.arrivalMins != null) {
+      const startCp = null; // duration already encoded in arrivalMins vs startMins
       stats.push(`
         <div class="stat">
-          <div class="stat-lbl">Leg Time</div>
-          <div class="stat-val accent">${formatDuration(cp.legTimeMins)}</div>
+          <div class="stat-lbl">Total Time</div>
+          <div class="stat-val accent">${formatDuration(cp.arrivalMins - startMins)}</div>
         </div>`);
     }
-    if (fields.climb && cp.legAscentM != null) {
+  } else {
+    // Regular CP stats (forward-looking: from this CP to next)
+    if (fields.total) {
       stats.push(`
         <div class="stat">
-          <div class="stat-lbl">Leg Climb</div>
-          <div class="stat-val climb">+${cp.legAscentM} <span class="stat-unit">m</span></div>
+          <div class="stat-lbl">Total</div>
+          <div class="stat-val">${cp.totalKm.toFixed(1)} <span class="stat-unit">km</span></div>
         </div>`);
+    }
+    if (cp.toNextKm != null) {
+      if (fields.next) {
+        stats.push(`
+          <div class="stat">
+            <div class="stat-lbl">${isBeforeFinish ? 'To Finish' : 'To Next CP'}</div>
+            <div class="stat-val accent">${cp.toNextKm.toFixed(1)} <span class="stat-unit">km</span></div>
+          </div>`);
+      }
+      if (fields.legtime && cp.legTimeMins != null) {
+        stats.push(`
+          <div class="stat">
+            <div class="stat-lbl">Leg Time</div>
+            <div class="stat-val accent">${formatDuration(cp.legTimeMins)}</div>
+          </div>`);
+      }
+      if (fields.climb && cp.legAscentM != null) {
+        stats.push(`
+          <div class="stat">
+            <div class="stat-lbl">Leg Climb</div>
+            <div class="stat-val climb">+${cp.legAscentM} <span class="stat-unit">m</span></div>
+          </div>`);
+      }
     }
   }
 
@@ -382,49 +422,259 @@ function renderCard() {
 // ============================================================
 
 function downloadCard() {
-  const card = cardOutput.querySelector('.race-card');
-  if (!card) return;
+  if (!checkpoints || !checkpoints.length) return;
 
   downloadBtn.textContent = 'Generating…';
   downloadBtn.disabled = true;
 
-  // Temporarily remove preview scale so download captures full-size card
-  const savedTransform = card.style.transform;
-  const savedOrigin    = card.style.transformOrigin;
-  card.style.transform = '';
-  card.style.transformOrigin = '';
+  // Read theme colours from CSS variables on the rendered card
+  const cardEl = cardOutput.querySelector('.race-card');
+  const cs = cardEl ? getComputedStyle(cardEl) : document.documentElement;
+  const v  = n => cs.getPropertyValue(n).trim();
+  const C  = {
+    bg:           v('--bg'),
+    cardBg:       v('--card-bg'),
+    border:       v('--card-border'),
+    startBorder:  v('--start-border'),
+    finishBorder: v('--finish-border'),
+    textName:     v('--text-name'),
+    textMuted:    v('--text-muted'),
+    accentStart:  v('--accent-start'),
+    accentCp:     v('--accent-cp'),
+    accentFinish: v('--accent-finish'),
+    statVal:      v('--stat-val'),
+    statAccent:   v('--stat-accent'),
+    statClimb:    v('--stat-climb'),
+    labelStart:   v('--label-start'),
+    labelCp:      v('--label-cp'),
+    labelFinish:  v('--label-finish'),
+    footer:       v('--footer'),
+  };
 
-  document.fonts.load('700 12px Inter').then(() => {
-    return document.fonts.ready;
-  }).then(() => {
-    html2canvas(card, {
-      scale: 3,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: null,
-      logging: false,
-      onclone: (_doc, el) => {
-        // html2canvas misrenders letter-spacing — flatten it before capture
-        el.querySelectorAll('*').forEach(node => {
-          node.style.letterSpacing = 'normal';
-        });
-      },
-    }).then(canvas => {
-      const link = document.createElement('a');
-      link.download = `racecard-${(raceName || 'myrace').toLowerCase().replace(/\s+/g, '-')}.png`;
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    }).catch(err => {
-      alert('Could not generate image. Try a different browser if the issue persists.');
-      console.error(err);
-    }).finally(() => {
-      // Restore preview scale
-      card.style.transform = savedTransform;
-      card.style.transformOrigin = savedOrigin;
-      downloadBtn.textContent = '⬇ Download Image';
-      downloadBtn.disabled = false;
-    });
+  const fields     = getFields();
+  const SCALE      = 3;
+  const W          = 393;   // matches .race-card width in CSS
+  const TOP_PAD    = 220;   // matches CSS padding-top — phone clock sits here
+  const SIDE_PAD   = 14;    // matches CSS padding left/right
+  const BOT_PAD    = 16;    // matches CSS padding-bottom
+  const CX         = SIDE_PAD;
+  const IW         = W - SIDE_PAD * 2;
+  const CPX        = 10;    // card inner padding horizontal (matches CSS padding: 7px 10px)
+  const CPY        = 7;     // card inner padding vertical
+  const RADIUS     = 11;
+  const GAP        = 10;    // gap between cards
+
+  // ── helpers ──────────────────────────────────────────────────
+  function cpName(cp) {
+    return cp.name.replace(/^checkpoint\s*\d*\s*[-–—:,]?\s*/i, '').trim() || cp.name;
+  }
+
+  function buildStats(cp, isBeforeFinish) {
+    // returns [{label, value, unit, color}]
+    if (cp.type === 'finish') {
+      const s = [{ label: 'Total', value: cp.totalKm.toFixed(1), unit: 'km', color: C.statVal }];
+      if (cp.totalAscentM != null)
+        s.push({ label: 'Total Climb', value: `+${Math.round(cp.totalAscentM)}`, unit: 'm', color: C.statClimb });
+      if (cp.arrivalMins != null)
+        s.push({ label: 'Total Time', value: formatDuration(cp.arrivalMins - startMins), unit: '', color: C.statAccent });
+      return s;
+    }
+    const s = [];
+    if (fields.total)
+      s.push({ label: 'Total', value: cp.totalKm.toFixed(1), unit: 'km', color: C.statVal });
+    if (fields.next && cp.toNextKm != null)
+      s.push({ label: isBeforeFinish ? 'To Finish' : 'To Next CP', value: cp.toNextKm.toFixed(1), unit: 'km', color: C.statAccent });
+    if (fields.legtime && cp.legTimeMins != null)
+      s.push({ label: 'Leg Time', value: formatDuration(cp.legTimeMins), unit: '', color: C.statAccent });
+    if (fields.climb && cp.legAscentM != null)
+      s.push({ label: 'Leg Climb', value: `+${cp.legAscentM}`, unit: 'm', color: C.statClimb });
+    return s;
+  }
+
+  // ── measure card heights ──────────────────────────────────────
+  // We need a temporary canvas to measureText for name wrapping
+  const tmpCanvas = document.createElement('canvas');
+  const tmpCtx    = tmpCanvas.getContext('2d');
+
+  function measureCardHeight(cp, isBeforeFinish) {
+    const hasTime  = cp.arrivalMins != null;
+    const nameMaxW = hasTime ? IW - CPX * 2 - 72 : IW - CPX * 2;
+    tmpCtx.font = '700 12px Inter, Arial, sans-serif';
+    const nameLines = tmpCtx.measureText(cpName(cp)).width > nameMaxW ? 2 : 1;
+    // Left side: label(9px) + 2px gap + name lines
+    const leftH  = 10 + 2 + 14.4 * nameLines;
+    // Right side when time shown: time-lbl(8px) + 2px gap + time-val(15px)
+    const rightH = hasTime ? 9 + 2 + 17 : 0;
+    const topH   = CPY + Math.max(leftH, rightH) + 4;
+    const stats  = buildStats(cp, isBeforeFinish);
+    const statH  = stats.length > 0 ? (6 + 9 + 13) : 0; // divider + lbl + val
+    return Math.ceil(topH + statH + CPY);
+  }
+
+  // Total canvas height
+  let totalH = TOP_PAD;
+  checkpoints.forEach((cp, i) => {
+    totalH += measureCardHeight(cp, i === checkpoints.length - 2);
+    if (i < checkpoints.length - 1) totalH += GAP;
   });
+  totalH += 26 + BOT_PAD; // footer + bottom padding
+
+  // ── create canvas ─────────────────────────────────────────────
+  const canvas = document.createElement('canvas');
+  canvas.width  = W * SCALE;
+  canvas.height = totalH * SCALE;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(SCALE, SCALE);
+
+  // Background
+  ctx.fillStyle = C.bg || '#080d24';
+  ctx.fillRect(0, 0, W, totalH);
+
+  // ── drawing helpers ───────────────────────────────────────────
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+  }
+
+  function drawText(str, x, y, font, color, align) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.font = font;
+    ctx.textAlign  = align || 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(str, x, y);
+    ctx.restore();
+  }
+
+  // ── draw each card ────────────────────────────────────────────
+  let curY = TOP_PAD;
+
+  checkpoints.forEach((cp, i) => {
+    const isBeforeFinish = i === checkpoints.length - 2;
+    const stats  = buildStats(cp, isBeforeFinish);
+    const cardH  = measureCardHeight(cp, isBeforeFinish);
+    const border = cp.type === 'start' ? C.startBorder :
+                   cp.type === 'finish' ? C.finishBorder : C.border;
+
+    // Card background + border
+    ctx.fillStyle = C.cardBg;
+    roundRect(CX, curY, IW, cardH, RADIUS);
+    ctx.fill();
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 1;
+    roundRect(CX, curY, IW, cardH, RADIUS);
+    ctx.stroke();
+
+    const labelColor = cp.type === 'start' ? C.labelStart :
+                       cp.type === 'finish' ? C.labelFinish : C.labelCp;
+    const timeColor  = cp.type === 'start' ? C.accentStart :
+                       cp.type === 'finish' ? C.accentFinish : C.accentCp;
+    const label = cp.type === 'start' ? 'Start' :
+                  cp.type === 'finish' ? 'Finish' : `CP ${cp.cpNum}`;
+
+    let iy = curY + CPY;
+    const ix = CX + CPX;
+    const rx = CX + IW - CPX; // right edge for right-aligned text
+
+    // Label (e.g. "CP 1", "Start", "Finish")
+    drawText(label.toUpperCase(), ix, iy, '700 9px Inter, Arial, sans-serif', labelColor);
+
+    // Time block (right-aligned) — only draw when a time exists
+    const hasTime = cp.arrivalMins != null;
+    if (hasTime) {
+      const timeLbl = cp.type === 'start' ? 'Start Time' : 'Target';
+      drawText(timeLbl.toUpperCase(), rx, iy, '400 8px Inter, Arial, sans-serif', C.textMuted, 'right');
+    }
+    iy += 11;
+
+    // CP name (left side, may wrap)
+    const name = cpName(cp);
+    const nameMaxW = hasTime ? IW - CPX * 2 - 72 : IW - CPX * 2;
+    ctx.font = '700 12px Inter, Arial, sans-serif';
+    const nameW = ctx.measureText(name).width;
+    if (nameW > nameMaxW) {
+      // simple word-wrap: split at last space before overflow
+      const words = name.split(' ');
+      let line1 = '', line2 = '';
+      for (const word of words) {
+        const test = line1 ? line1 + ' ' + word : word;
+        if (ctx.measureText(test).width <= nameMaxW) { line1 = test; }
+        else { line2 = line2 ? line2 + ' ' + word : word; }
+      }
+      drawText(line1, ix, iy, '700 12px Inter, Arial, sans-serif', C.textName);
+      iy += 14;
+      drawText(line2, ix, iy, '700 12px Inter, Arial, sans-serif', C.textName);
+      iy += 14;
+    } else {
+      drawText(name, ix, iy, '700 12px Inter, Arial, sans-serif', C.textName);
+      iy += 14;
+    }
+
+    // Time value (right-aligned, below time label)
+    if (hasTime) {
+      drawText(formatTime(cp.arrivalMins), rx, curY + CPY + 11, '700 15px Inter, Arial, sans-serif', timeColor, 'right');
+    }
+
+    iy += 4; // gap before stats
+
+    // Stats section
+    if (stats.length > 0) {
+      // Divider
+      ctx.beginPath();
+      ctx.strokeStyle = C.border;
+      ctx.lineWidth = 0.75;
+      ctx.moveTo(ix, iy);
+      ctx.lineTo(CX + IW - CPX, iy);
+      ctx.stroke();
+      iy += 6;
+
+      const statW = IW / stats.length;
+      stats.forEach((stat, si) => {
+        const sc = CX + si * statW + statW / 2;
+
+        // Vertical separator
+        if (si > 0) {
+          ctx.beginPath();
+          ctx.strokeStyle = C.border;
+          ctx.lineWidth = 0.75;
+          ctx.moveTo(CX + si * statW, iy - 2);
+          ctx.lineTo(CX + si * statW, iy + 9 + 13);
+          ctx.stroke();
+        }
+
+        // Stat label
+        drawText(stat.label.toUpperCase(), sc, iy, '400 7.5px Inter, Arial, sans-serif', C.textMuted, 'center');
+
+        // Stat value + unit
+        const val     = stat.unit ? `${stat.value}${stat.unit}` : stat.value;
+        drawText(val, sc, iy + 9, '700 11px Inter, Arial, sans-serif', stat.color, 'center');
+      });
+    }
+
+    curY += cardH + GAP;
+  });
+
+  // Footer
+  drawText('Good luck · myracecard.uk', W / 2, curY + 6, '400 10px Inter, Arial, sans-serif', C.footer || C.textMuted, 'center');
+
+  // Download
+  const filename = `racecard-${(raceName || 'myrace').toLowerCase().replace(/\s+/g, '-')}.png`;
+  const link = document.createElement('a');
+  link.download = filename;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+
+  downloadBtn.textContent = '⬇ Download Image';
+  downloadBtn.disabled = false;
 }
 
 // ============================================================
