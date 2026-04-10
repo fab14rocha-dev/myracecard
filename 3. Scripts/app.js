@@ -528,11 +528,12 @@ function advanceQuestion(index, skipped = false) {
       if (hasAny) {
         const dur = (isNaN(h) ? 0 : h) * 60 + (isNaN(m) ? 0 : m);
         if (dur <= 0) { showQError(2, 'Duration must be greater than zero.'); return; }
-        // Sanity check: minimum pace of 6 min/km (elite trail runner pace)
+        // Sanity check: minimum pace of 4.5 min/km
         const totalKm = gpxWaypoints.length > 0 ? gpxWaypoints[gpxWaypoints.length - 1].cumDist : 0;
-        if (totalKm > 0 && dur < totalKm * 6) {
-          const minH = Math.floor(totalKm * 6 / 60);
-          const minM = Math.round(totalKm * 6 % 60);
+        if (totalKm > 0 && dur < totalKm * 4.5) {
+          const minMins = totalKm * 4.5;
+          const minH = Math.floor(minMins / 60);
+          const minM = Math.round(minMins % 60);
           showQError(2, `That's too fast for ${totalKm.toFixed(0)} km. Minimum realistic time is around ${minH}h ${minM > 0 ? minM + 'm' : ''}.`);
           return;
         }
