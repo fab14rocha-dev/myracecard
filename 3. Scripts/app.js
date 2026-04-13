@@ -9,6 +9,15 @@ let currentTheme     = 'default';
 let raceName         = '';
 let startMins        = 0;
 let targetFinishMins = null;
+let currentUnit      = 'km';  // 'km' or 'mi'
+let cutoffTimes      = {};    // { cpIndex: timeString } e.g. { 1: '10:30' }
+
+function toUnit(km) {
+  return currentUnit === 'mi' ? km * 0.621371 : km;
+}
+function unitLabel() {
+  return currentUnit === 'mi' ? 'mi' : 'km';
+}
 
 // ---- DOM References ----
 const appEl         = document.getElementById('app');
@@ -133,6 +142,44 @@ function snapWaypoint(wpt, track) {
   return bestIdx;
 }
 
+// Snap all waypoints to track points, handling same-location CPs (e.g. out-and-back).
+// When two waypoints snap to the same track point, the second is re-snapped to the
+// closest track point AFTER the first — finding the return pass through that location.
+function snapWaypointsOrdered(waypoints, track) {
+  const initial = waypoints.map(wpt => {
+    const idx = snapWaypoint(wpt, track);
+    return { ...wpt, trackIdx: idx, cumDist: track[idx].cumDist };
+  });
+  // Sort by cumDist. For ties, put waypoints with "return/back" in the name last
+  // so they correctly land on the return pass of an out-and-back section.
+  initial.sort((a, b) => {
+    if (a.cumDist !== b.cumDist) return a.cumDist - b.cumDist;
+    const aReturn = /return|back|\bleg\s*2\b/i.test(a.name);
+    const bReturn = /return|back|\bleg\s*2\b/i.test(b.name);
+    if (aReturn !== bReturn) return aReturn ? 1 : -1;
+    return 0;
+  });
+
+  const result = [];
+  for (const wpt of initial) {
+    if (result.length === 0 || wpt.cumDist !== result[result.length - 1].cumDist) {
+      result.push(wpt);
+    } else {
+      // Re-snap: search for closest track point strictly after the previous snap
+      const afterIdx = result[result.length - 1].trackIdx + 1;
+      let bestIdx = afterIdx, bestDist = Infinity;
+      for (let i = afterIdx; i < track.length; i++) {
+        const d = haversine(wpt, track[i]);
+        if (d < bestDist) { bestDist = d; bestIdx = i; }
+      }
+      result.push({ ...wpt, trackIdx: bestIdx, cumDist: track[bestIdx].cumDist });
+    }
+  }
+  // Re-sort after re-snapping — re-snapped waypoints may have moved in the order
+  result.sort((a, b) => a.cumDist - b.cumDist);
+  return result;
+}
+
 // Total elevation gain (ascent only) between two track indices
 function elevGain(track, fromIdx, toIdx) {
   let gain = 0;
@@ -157,22 +204,10 @@ function processCheckpoints(gpxData, startM, targetFinM) {
   // Build track with cumulative distances
   const track = buildTrack(trackPoints);
 
-  // Snap each waypoint to the nearest track point
-  const snapped = waypoints.map(wpt => {
-    const idx = snapWaypoint(wpt, track);
-    return { ...wpt, trackIdx: idx, cumDist: track[idx].cumDist };
-  });
+  // Snap waypoints to track, re-snapping same-location CPs to their return pass
+  const deduped = snapWaypointsOrdered(waypoints, track);
 
-  // Sort waypoints by their position along the track
-  snapped.sort((a, b) => a.cumDist - b.cumDist);
-
-  // Remove duplicate waypoints that snapped to the same track position
-  // (e.g. two GPX waypoints at the same geographic location — keep first)
-  const deduped = snapped.filter((wpt, i) =>
-    i === 0 || wpt.cumDist !== snapped[i - 1].cumDist
-  );
-
-  if (deduped.length < 2) throw new Error('Not enough distinct checkpoints after removing duplicates. Check your GPX file.');
+  if (deduped.length < 2) throw new Error('Not enough distinct checkpoints. Check your GPX file.');
 
   // Build legs between consecutive waypoints
   const legs = [];
@@ -250,11 +285,12 @@ function formatDuration(mins) {
 // ============================================================
 
 function getFields() {
+  const btn = f => document.querySelector(`.field-btn[data-field="${f}"]`);
   return {
-    total:   document.getElementById('show-total').checked,
-    next:    document.getElementById('show-next').checked,
-    legtime: document.getElementById('show-legtime').checked,
-    climb:   document.getElementById('show-climb').checked,
+    total:   btn('total')?.classList.contains('active')   ?? true,
+    next:    btn('next')?.classList.contains('active')    ?? true,
+    legtime: btn('legtime')?.classList.contains('active') ?? true,
+    climb:   btn('climb')?.classList.contains('active')   ?? true,
   };
 }
 
@@ -263,6 +299,7 @@ function renderRow(cp, isBeforeFinish, fields) {
   const labelClass = `cp-label-${cp.type}`;
 
   // Times block
+  const cutoff = cutoffTimes[cp.cpNum ?? 'finish'] || null;
   let timesHtml = '';
   if (cp.type === 'start') {
     timesHtml = `
@@ -273,23 +310,28 @@ function renderRow(cp, isBeforeFinish, fields) {
   } else {
     const targetClass = cp.type === 'finish' ? 'time-finish' : 'time-target';
     const hasTarget   = cp.arrivalMins != null;
-
-    timesHtml = hasTarget ? `
+    const targetHtml  = hasTarget ? `
       <div class="time-block">
         <div class="time-lbl">Target</div>
         <div class="time-val ${targetClass}">${formatTime(cp.arrivalMins)}</div>
       </div>` : '';
+    const cutoffHtml  = cutoff ? `
+      <div class="time-block">
+        <div class="time-lbl">Cutoff</div>
+        <div class="time-val time-cutoff">${cutoff}</div>
+      </div>` : '';
+    timesHtml = targetHtml + cutoffHtml;
   }
 
   // Stats block
+  const ul = unitLabel();
   const stats = [];
 
   if (cp.type === 'finish') {
-    // Finish card always shows race summary
     stats.push(`
       <div class="stat">
         <div class="stat-lbl">Total</div>
-        <div class="stat-val">${cp.totalKm.toFixed(1)} <span class="stat-unit">km</span></div>
+        <div class="stat-val">${toUnit(cp.totalKm).toFixed(1)} <span class="stat-unit">${ul}</span></div>
       </div>`);
     if (cp.totalAscentM != null) {
       stats.push(`
@@ -299,7 +341,6 @@ function renderRow(cp, isBeforeFinish, fields) {
         </div>`);
     }
     if (cp.arrivalMins != null) {
-      const startCp = null; // duration already encoded in arrivalMins vs startMins
       stats.push(`
         <div class="stat">
           <div class="stat-lbl">Total Time</div>
@@ -307,12 +348,11 @@ function renderRow(cp, isBeforeFinish, fields) {
         </div>`);
     }
   } else {
-    // Regular CP stats (forward-looking: from this CP to next)
     if (fields.total) {
       stats.push(`
         <div class="stat">
           <div class="stat-lbl">Total</div>
-          <div class="stat-val">${cp.totalKm.toFixed(1)} <span class="stat-unit">km</span></div>
+          <div class="stat-val">${toUnit(cp.totalKm).toFixed(1)} <span class="stat-unit">${ul}</span></div>
         </div>`);
     }
     if (cp.toNextKm != null) {
@@ -320,7 +360,7 @@ function renderRow(cp, isBeforeFinish, fields) {
         stats.push(`
           <div class="stat">
             <div class="stat-lbl">${isBeforeFinish ? 'To Finish' : 'To Next CP'}</div>
-            <div class="stat-val accent">${cp.toNextKm.toFixed(1)} <span class="stat-unit">km</span></div>
+            <div class="stat-val accent">${toUnit(cp.toNextKm).toFixed(1)} <span class="stat-unit">${ul}</span></div>
           </div>`);
       }
       if (fields.legtime && cp.legTimeMins != null) {
@@ -454,7 +494,7 @@ function downloadCard() {
   const fields     = getFields();
   const SCALE      = 3;
   const W          = 393;   // matches .race-card width in CSS
-  const TOP_PAD    = 220;   // matches CSS padding-top — phone clock sits here
+  const TOP_PAD    = 320;   // matches CSS padding-top — clears iOS lock screen clock
   const SIDE_PAD   = 14;    // matches CSS padding left/right
   const BOT_PAD    = 16;    // matches CSS padding-bottom
   const CX         = SIDE_PAD;
@@ -471,8 +511,9 @@ function downloadCard() {
 
   function buildStats(cp, isBeforeFinish) {
     // returns [{label, value, unit, color}]
+    const ul = unitLabel();
     if (cp.type === 'finish') {
-      const s = [{ label: 'Total', value: cp.totalKm.toFixed(1), unit: 'km', color: C.statVal }];
+      const s = [{ label: 'Total', value: toUnit(cp.totalKm).toFixed(1), unit: ul, color: C.statVal }];
       if (cp.totalAscentM != null)
         s.push({ label: 'Total Climb', value: `+${Math.round(cp.totalAscentM)}`, unit: 'm', color: C.statClimb });
       if (cp.arrivalMins != null)
@@ -481,9 +522,9 @@ function downloadCard() {
     }
     const s = [];
     if (fields.total)
-      s.push({ label: 'Total', value: cp.totalKm.toFixed(1), unit: 'km', color: C.statVal });
+      s.push({ label: 'Total', value: toUnit(cp.totalKm).toFixed(1), unit: ul, color: C.statVal });
     if (fields.next && cp.toNextKm != null)
-      s.push({ label: isBeforeFinish ? 'To Finish' : 'To Next CP', value: cp.toNextKm.toFixed(1), unit: 'km', color: C.statAccent });
+      s.push({ label: isBeforeFinish ? 'To Finish' : 'To Next CP', value: toUnit(cp.toNextKm).toFixed(1), unit: ul, color: C.statAccent });
     if (fields.legtime && cp.legTimeMins != null)
       s.push({ label: 'Leg Time', value: formatDuration(cp.legTimeMins), unit: '', color: C.statAccent });
     if (fields.climb && cp.legAscentM != null)
@@ -503,8 +544,9 @@ function downloadCard() {
     const nameLines = tmpCtx.measureText(cpName(cp)).width > nameMaxW ? 2 : 1;
     // Left side: label(9px) + 2px gap + name lines
     const leftH  = 10 + 2 + 14.4 * nameLines;
-    // Right side when time shown: time-lbl(8px) + 2px gap + time-val(15px)
-    const rightH = hasTime ? 9 + 2 + 17 : 0;
+    // Right side when time shown: time-lbl + time-val (+ cutoff lbl + cutoff-val if set)
+    const hasCutoff = !!(cutoffTimes[cp.cpNum ?? 'finish']);
+    const rightH = hasTime ? (9 + 2 + 17 + (hasCutoff ? 20 : 0)) : 0;
     const topH   = CPY + Math.max(leftH, rightH) + 4;
     const stats  = buildStats(cp, isBeforeFinish);
     const statH  = stats.length > 0 ? (6 + 9 + 13) : 0; // divider + lbl + val
@@ -518,6 +560,7 @@ function downloadCard() {
     if (i < checkpoints.length - 1) totalH += GAP;
   });
   totalH += 26 + BOT_PAD; // footer + bottom padding
+  totalH = Math.max(totalH, 855);  // never smaller than the phone screen
 
   // ── create canvas ─────────────────────────────────────────────
   const canvas = document.createElement('canvas');
@@ -555,6 +598,14 @@ function downloadCard() {
     ctx.restore();
   }
 
+  // Distance + target time — sits in the gap between the iOS clock and the first card
+  const totalKmHeader = toUnit(checkpoints[checkpoints.length - 1].totalKm).toFixed(1);
+  let headerSub = `${totalKmHeader} ${unitLabel()}`;
+  if (targetFinishMins != null) {
+    headerSub += `  ·  ${formatDuration(targetFinishMins - startMins)} target`;
+  }
+  drawText(headerSub, W / 2, TOP_PAD - 40, '400 13px Inter, Arial, sans-serif', C.textMuted || '#4a5a8a', 'center');
+
   // ── draw each card ────────────────────────────────────────────
   let curY = TOP_PAD;
 
@@ -589,7 +640,8 @@ function downloadCard() {
     drawText(label.toUpperCase(), ix, iy, '700 9px Inter, Arial, sans-serif', labelColor);
 
     // Time block (right-aligned) — only draw when a time exists
-    const hasTime = cp.arrivalMins != null;
+    const hasTime  = cp.arrivalMins != null;
+    const cpCutoff = cutoffTimes[cp.cpNum ?? 'finish'] || null;
     if (hasTime) {
       const timeLbl = cp.type === 'start' ? 'Start Time' : 'Target';
       drawText(timeLbl.toUpperCase(), rx, iy, '400 8px Inter, Arial, sans-serif', C.textMuted, 'right');
@@ -622,6 +674,13 @@ function downloadCard() {
     // Time value (right-aligned, below time label)
     if (hasTime) {
       drawText(formatTime(cp.arrivalMins), rx, curY + CPY + 11, '700 15px Inter, Arial, sans-serif', timeColor, 'right');
+    }
+
+    // Cutoff time (right-aligned, below target)
+    if (cpCutoff) {
+      const cutoffLblY = curY + CPY + 11 + 16;
+      drawText('CUTOFF', rx, cutoffLblY, '400 7.5px Inter, Arial, sans-serif', C.textMuted, 'right');
+      drawText(cpCutoff, rx, cutoffLblY + 10, '700 11px Inter, Arial, sans-serif', '#ef4444', 'right');
     }
 
     iy += 4; // gap before stats
@@ -811,6 +870,7 @@ function generateCard() {
   }
 
   renderCard();
+  buildCutoffList();
   stepSettings.classList.add('hidden');
   stepPreview.classList.remove('hidden');
 }
@@ -821,11 +881,7 @@ function generateCard() {
 
 function processWaypoints(gpxData) {
   const track   = buildTrack(gpxData.trackPoints);
-  const snapped = gpxData.waypoints.map(wpt => {
-    const idx = snapWaypoint(wpt, track);
-    return { ...wpt, trackIdx: idx, cumDist: track[idx].cumDist };
-  });
-  snapped.sort((a, b) => a.cumDist - b.cumDist);
+  const snapped = snapWaypointsOrdered(gpxData.waypoints, track);
 
   return snapped.map((wpt, i) => {
     const prev      = i > 0 ? snapped[i - 1] : null;
@@ -1031,9 +1087,9 @@ function loadGPXFile(file) {
       }
 
       // Show analysis screen
-      appEl.classList.remove('centered');
       stepUpload.classList.add('hidden');
       stepAnalysis.classList.remove('hidden');
+      window.scrollTo(0, 0);
       showAnalysis(gpxParsed);
     } catch (err) {
       alert(err.message);
@@ -1126,9 +1182,77 @@ document.querySelectorAll('.theme-btn').forEach(btn => {
   });
 });
 
-// Field toggles
-['show-total', 'show-next', 'show-legtime', 'show-climb'].forEach(id => {
-  document.getElementById(id).addEventListener('change', renderCard);
+// Field buttons
+document.querySelectorAll('.field-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('active');
+    renderCard();
+  });
+});
+
+// Limit target duration inputs to 2 digits
+targetHoursIn.addEventListener('input', () => {
+  if (targetHoursIn.value.length > 2) targetHoursIn.value = targetHoursIn.value.slice(0, 2);
+});
+targetMinsIn.addEventListener('input', () => {
+  if (targetMinsIn.value.length > 2) targetMinsIn.value = targetMinsIn.value.slice(0, 2);
+  if (parseInt(targetMinsIn.value, 10) > 59) targetMinsIn.value = '59';
+});
+
+// Cutoff toggle (collapsed by default)
+document.getElementById('cutoff-toggle').addEventListener('click', () => {
+  const toggle = document.getElementById('cutoff-toggle');
+  const list   = document.getElementById('cutoff-list');
+  toggle.classList.toggle('open');
+  list.classList.toggle('open');
+});
+
+// Unit toggle
+document.querySelectorAll('.unit-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.unit-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentUnit = btn.dataset.unit;
+    renderCard();
+  });
+});
+
+// Build cutoff time inputs in the preview panel
+function buildCutoffList() {
+  const list = document.getElementById('cutoff-list');
+  if (!list || !checkpoints) return;
+  list.innerHTML = '';
+  checkpoints.forEach((cp, i) => {
+    if (cp.type === 'start') return;
+    const label = cp.type === 'finish' ? 'Finish' : `CP ${cp.cpNum}`;
+    const name  = cp.name.replace(/^checkpoint\s*\d*\s*[-–—:,]?\s*/i, '').trim() || cp.name;
+    const row   = document.createElement('div');
+    row.className = 'cutoff-row';
+    row.innerHTML = `
+      <span class="cutoff-row-label">${label} — ${name}</span>
+      <input class="cutoff-input" type="time" data-cp="${cp.cpNum ?? 'finish'}" value="${cutoffTimes[cp.cpNum ?? 'finish'] || ''}">
+    `;
+    row.querySelector('input').addEventListener('change', e => {
+      const key = e.target.dataset.cp;
+      cutoffTimes[key] = e.target.value;
+      renderCard();
+    });
+    list.appendChild(row);
+  });
+}
+
+// Phone model selector
+document.querySelectorAll('.phone-model-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.phone-model-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const frame = document.getElementById('phone-frame');
+    if (btn.dataset.model === 'samsung') {
+      frame.classList.add('phone-samsung');
+    } else {
+      frame.classList.remove('phone-samsung');
+    }
+  });
 });
 
 // Download
@@ -1151,6 +1275,7 @@ function goHome() {
   raceName         = '';
   startMins        = 0;
   targetFinishMins = null;
+  cutoffTimes      = {};
   selectedCPs.clear();
   fileInput.value       = '';
   raceNameInput.value   = '';
@@ -1163,7 +1288,6 @@ function goHome() {
   stepSettings.classList.add('hidden');
   stepPreview.classList.add('hidden');
   stepUpload.classList.remove('hidden');
-  appEl.classList.add('centered');
 }
 
 document.getElementById('home-btn').addEventListener('click', goHome);

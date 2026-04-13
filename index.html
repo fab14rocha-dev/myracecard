@@ -59,10 +59,6 @@
       flex-direction: column;
     }
 
-    /* When only the upload step is visible, fill height and center */
-    .app.centered {
-      justify-content: center;
-    }
 
     /* Header */
     .app-header { text-align: center; margin-bottom: 40px; }
@@ -700,6 +696,23 @@
 
     .btn-secondary:hover { border-color: var(--arctic-faint); color: var(--arctic-dark); }
 
+    .btn-back {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      background: transparent;
+      border: 1px solid var(--arctic-border);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--arctic-muted);
+      cursor: pointer;
+      margin-bottom: 12px;
+      text-align: left;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-back:hover { border-color: var(--arctic-primary); color: var(--arctic-primary); }
+
     /* Preview controls panel */
     .preview-controls {
       background: var(--arctic-panel);
@@ -741,24 +754,93 @@
     .theme-btn:hover { border-color: var(--arctic-primary); color: var(--arctic-primary); }
     .theme-btn.active { background: var(--arctic-primary); color: #fff; border-color: var(--arctic-primary); }
 
-    .field-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+    .unit-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--arctic-border);
+      background: var(--arctic-light);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--arctic-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .unit-btn:hover { border-color: var(--arctic-primary); color: var(--arctic-primary); }
+    .unit-btn.active { background: var(--arctic-primary); color: #fff; border-color: var(--arctic-primary); }
 
-    .toggle {
+    .cutoff-toggle {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--arctic-body);
+      justify-content: space-between;
+      width: 100%;
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--arctic-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
       cursor: pointer;
-      font-weight: 500;
+    }
+    .cutoff-toggle-arrow { font-style: normal; transition: transform 0.2s; }
+    .cutoff-toggle.open .cutoff-toggle-arrow { transform: rotate(90deg); }
+    .cutoff-collapsed { display: none; margin-top: 10px; }
+    .cutoff-collapsed.open { display: block; }
+
+    .optional-label {
+      font-size: 10px;
+      font-weight: 400;
+      color: var(--arctic-muted);
+      text-transform: none;
+      letter-spacing: 0;
     }
 
-    .toggle input[type="checkbox"] {
-      width: 15px;
-      height: 15px;
-      cursor: pointer;
-      accent-color: var(--arctic-primary);
+    .cutoff-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 6px;
     }
+    .cutoff-row-label {
+      font-size: 12px;
+      color: var(--arctic-body);
+      font-weight: 500;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cutoff-input {
+      width: 90px;
+      padding: 4px 6px;
+      border: 1px solid var(--arctic-border);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--arctic-dark);
+      background: var(--arctic-light);
+      text-align: center;
+    }
+    .cutoff-input:focus { outline: none; border-color: var(--arctic-primary); }
+
+    .field-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+    .field-btn {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--arctic-border);
+      background: var(--arctic-light);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--arctic-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+    .field-btn:hover { border-color: var(--arctic-primary); color: var(--arctic-primary); }
+    .field-btn.active { background: var(--arctic-primary); color: #fff; border-color: var(--arctic-primary); }
 
     /* Preview two-column layout */
     .app:has(#step-preview:not(.hidden)) {
@@ -769,27 +851,34 @@
       display: flex;
       flex-direction: column;
       gap: 24px;
+      justify-content: center;
     }
 
     @media (min-width: 820px) {
       .preview-layout {
         flex-direction: row;
         align-items: flex-start;
-        gap: 20px;
+        gap: 14px;
+        justify-content: center;
       }
       .preview-left {
         flex: 0 0 280px;
-        position: sticky;
-        top: 24px;
       }
+    }
+
+    /* Phone column — wraps selector + mockup, sized to the phone width */
+    .phone-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
     }
 
     /* Phone mockup — wrapper shrinks to scaled size so layout isn't broken */
     .phone-mockup {
       display: flex;
       justify-content: center;
-      flex: 1;
-      height: calc((760px + 28px) * 0.72);
+      height: calc((855px + 28px) * 0.72);
       align-items: flex-start;
     }
 
@@ -824,7 +913,7 @@
       border-radius: 42px;
       overflow: hidden;
       position: relative;
-      height: 760px;
+      height: 855px;
     }
 
     /* Island floats on top */
@@ -861,7 +950,7 @@
 
     @media (max-width: 480px) {
       .phone-mockup {
-        height: calc((760px + 28px) * 0.58);
+        height: calc((855px + 28px) * 0.58);
       }
       .phone-frame {
         transform: scale(0.58);
@@ -869,13 +958,51 @@
       }
     }
 
+    /* Phone model selector — sits above the preview layout, centered */
+    .phone-model-selector {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .phone-model-btn {
+      padding: 6px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--arctic-border);
+      background: var(--arctic-light);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--arctic-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .phone-model-btn:hover { border-color: var(--arctic-primary); color: var(--arctic-primary); }
+    .phone-model-btn.active { background: var(--arctic-primary); color: #fff; border-color: var(--arctic-primary); }
+
+    /* Samsung Galaxy S24 frame variant */
+    .phone-frame.phone-samsung {
+      border-radius: 44px;
+      background: linear-gradient(160deg, #1e1e1e, #080808);
+    }
+    .phone-frame.phone-samsung .phone-screen { border-radius: 34px; }
+    .phone-frame.phone-samsung .phone-side-btn.silent { display: none; }
+    .phone-frame.phone-samsung .phone-home-bar { display: none; }
+    /* Punch-hole camera instead of Dynamic Island */
+    .phone-frame.phone-samsung .phone-island {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      top: 18px;
+      backdrop-filter: none;
+    }
+
     /* ========== RACE CARD OUTPUT STYLES ========== */
     /* These styles are used by the generated card AND captured by html2canvas */
 
     .race-card {
       width: 393px;
-      min-height: 760px;
-      padding: 220px 14px 16px;
+      min-height: 855px;
+      padding: 320px 14px 16px;
       font-family: 'Inter', Arial, sans-serif;
       background: var(--bg);
       display: flex;
@@ -1164,6 +1291,7 @@
     .time-start  { color: var(--accent-start); }
     .time-target { color: var(--accent-cp); }
     .time-finish { color: var(--accent-finish); }
+    .time-cutoff { color: #ef4444; font-size: 12px; }
 
     .times-divider {
       width: 1px;
@@ -1339,6 +1467,7 @@
 
         <div class="preview-left">
           <div class="preview-controls">
+            <button class="btn-back" id="edit-btn">← Edit settings</button>
             <div class="control-group">
               <label>Theme</label>
               <div class="theme-buttons">
@@ -1355,20 +1484,40 @@
             <div class="control-group">
               <label>Show Fields</label>
               <div class="field-toggles">
-                <label class="toggle"><input type="checkbox" id="show-total" checked> Total distance</label>
-                <label class="toggle"><input type="checkbox" id="show-next" checked> Distance to next</label>
-                <label class="toggle"><input type="checkbox" id="show-legtime" checked> Leg time</label>
-                <label class="toggle"><input type="checkbox" id="show-climb" checked> Leg climb</label>
+                <button class="field-btn active" data-field="total">Total distance</button>
+                <button class="field-btn active" data-field="next">Distance to next</button>
+                <button class="field-btn active" data-field="legtime">Leg time</button>
+                <button class="field-btn active" data-field="climb">Leg climb</button>
               </div>
             </div>
           </div>
+          <div class="preview-controls">
+            <div class="control-group">
+              <label>Units</label>
+              <div class="theme-buttons">
+                <button class="unit-btn active" data-unit="km">km</button>
+                <button class="unit-btn" data-unit="mi">miles</button>
+              </div>
+            </div>
+          </div>
+          <div class="preview-controls">
+            <button class="cutoff-toggle" id="cutoff-toggle">
+              <span>Cutoff times <span class="optional-label">(optional)</span></span>
+              <span class="cutoff-toggle-arrow">▸</span>
+            </button>
+            <div id="cutoff-list" class="cutoff-collapsed"></div>
+          </div>
           <button class="btn-download" id="download-btn">⬇ Download Image</button>
-          <button class="btn-secondary" id="edit-btn">Edit Settings</button>
           <button class="btn-secondary" id="new-card-btn" style="margin-top:8px;">+ Create New Card</button>
         </div>
 
-        <div class="phone-mockup">
-          <div class="phone-frame">
+        <div class="phone-column">
+          <div class="phone-model-selector">
+            <button class="phone-model-btn active" data-model="iphone">iPhone 17</button>
+            <button class="phone-model-btn" data-model="samsung">Galaxy S25</button>
+          </div>
+          <div class="phone-mockup">
+          <div class="phone-frame" id="phone-frame">
             <div class="phone-side-btn left silent"></div>
             <div class="phone-side-btn left vol-up"></div>
             <div class="phone-side-btn left vol-down"></div>
@@ -1385,6 +1534,7 @@
               </div>
               <div class="phone-home-bar"></div>
             </div>
+          </div>
           </div>
         </div>
 
