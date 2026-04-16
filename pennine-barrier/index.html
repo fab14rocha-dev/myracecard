@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pennine Barrier 50 — Race Guide</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --card: #22263a;
+      --border: #2e3350;
+      --accent: #4ea8de;
+      --accent2: #63e0a0;
+      --warn: #f5a623;
+      --danger: #e05c5c;
+      --text: #e8eaf0;
+      --muted: #8892aa;
+      --radius: 10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 48px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .header .badge {
+      display: inline-block;
+      background: var(--accent);
+      color: #0f1117;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+    .header h1 {
+      font-size: clamp(22px, 5vw, 34px);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      line-height: 1.15;
+    }
+    .header h1 span { color: var(--accent); }
+    .header .sub {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      max-width: 720px;
+      margin: 0 auto 24px;
+      background: var(--surface);
+      padding: 5px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #0f1117;
+    }
+    .tab-btn:not(.active):hover {
+      background: var(--card);
+      color: var(--text);
+    }
+
+    /* Tab panels */
+    .tab-panel { display: none; max-width: 720px; margin: 0 auto; }
+    .tab-panel.active { display: block; }
+
+    /* Quick facts strip */
+    .quick-facts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .fact {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 12px;
+      text-align: center;
+    }
+    .fact .label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    .fact .value {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .fact .value.green { color: var(--accent2); }
+    .fact .value.warn  { color: var(--warn); }
+
+    /* Sections */
+    .section {
+      margin-bottom: 10px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .section-header:hover { background: var(--card); }
+    .section-header .title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-header .icon {
+      font-size: 18px;
+      width: 28px;
+      text-align: center;
+    }
+    .section-header h2 {
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .section-header .chevron {
+      font-size: 12px;
+      color: var(--muted);
+      transition: transform 0.2s;
+    }
+    .section.open .chevron { transform: rotate(180deg); }
+
+    .section-body {
+      display: none;
+      padding: 0 18px 18px;
+      border-top: 1px solid var(--border);
+    }
+    .section.open .section-body { display: block; }
+
+    /* Content styles inside sections */
+    .section-body p {
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text);
+      margin-top: 14px;
+    }
+    .section-body ul, .section-body ol {
+      margin-top: 12px;
+      padding-left: 20px;
+    }
+    .section-body li {
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text);
+    }
+    .section-body li + li { margin-top: 4px; }
+
+    /* Alert boxes */
+    .alert {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .alert.warn {
+      background: rgba(245, 166, 35, 0.1);
+      border: 1px solid rgba(245, 166, 35, 0.3);
+      color: var(--warn);
+    }
+    .alert.danger {
+      background: rgba(224, 92, 92, 0.1);
+      border: 1px solid rgba(224, 92, 92, 0.3);
+      color: var(--danger);
+    }
+    .alert.info {
+      background: rgba(78, 168, 222, 0.1);
+      border: 1px solid rgba(78, 168, 222, 0.3);
+      color: var(--accent);
+    }
+    .alert.success {
+      background: rgba(99, 224, 160, 0.1);
+      border: 1px solid rgba(99, 224, 160, 0.3);
+      color: var(--accent2);
+    }
+
+    /* Checkpoint table */
+    .cp-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 13px;
+    }
+    .cp-table th {
+      text-align: left;
+      padding: 8px 10px;
+      background: var(--card);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+    .cp-table th:first-child { border-radius: 6px 0 0 0; }
+    .cp-table th:last-child  { border-radius: 0 6px 0 0; }
+    .cp-table td {
+      padding: 10px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      vertical-align: top;
+    }
+    .cp-table tr:last-child td { border-bottom: none; }
+    .cp-table .cp-name { font-weight: 700; color: var(--accent); }
+    .cp-table .cutoff  { font-weight: 700; color: var(--warn); }
+    .cp-table .no-crew {
+      font-size: 11px;
+      color: var(--danger);
+      font-weight: 600;
+      margin-top: 3px;
+    }
+
+    /* Kit grid */
+    .kit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .kit-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 9px 11px;
+      font-size: 13px;
+    }
+    .kit-item .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent2);
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    @media (max-width: 480px) {
+      .kit-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Timeline */
+    .timeline { margin-top: 14px; }
+    .tl-item {
+      display: flex;
+      gap: 14px;
+      padding-bottom: 16px;
+      position: relative;
+    }
+    .tl-item:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 32px;
+      bottom: 0;
+      width: 2px;
+      background: var(--border);
+    }
+    .tl-dot {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+    .tl-item.warn .tl-dot { border-color: var(--warn); }
+    .tl-item.green .tl-dot { border-color: var(--accent2); }
+    .tl-content { padding-top: 8px; }
+    .tl-time { font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 2px; }
+    .tl-item.warn .tl-time { color: var(--warn); }
+    .tl-item.green .tl-time { color: var(--accent2); }
+    .tl-desc { font-size: 14px; color: var(--text); }
+    .tl-note { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* Placeholder for her tab */
+    .coming-soon {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--muted);
+    }
+    .coming-soon .big { font-size: 40px; margin-bottom: 12px; }
+    .coming-soon h3 { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .coming-soon p { font-size: 14px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="badge">Saturday 2nd May 2026</div>
+    <h1>Pennine Barrier<br><span>50 Mile Ultramarathon</span></h1>
+    <p class="sub">Yorkshire Dales National Park &nbsp;·&nbsp; GB Ultras</p>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('me')">Race Details</button>
+    <button class="tab-btn" onclick="switchTab('plan')">My Plan</button>
+    <button class="tab-btn" onclick="switchTab('her')">For Martina</button>
+  </div>
+
+  <!-- MY RACE TAB -->
+  <div id="tab-me" class="tab-panel active">
+
+    <div class="quick-facts">
+      <div class="fact">
+        <div class="label">Race Day</div>
+        <div class="value">Sat 2 May</div>
+      </div>
+      <div class="fact">
+        <div class="label">Start Time</div>
+        <div class="value">6:00 AM</div>
+      </div>
+      <div class="fact">
+        <div class="label">Distance</div>
+        <div class="value green">52 mi</div>
+      </div>
+      <div class="fact">
+        <div class="label">Cutoff</div>
+        <div class="value warn">18 hrs</div>
+      </div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="section open">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🗓</span>
+          <h2>Weekend Timeline</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot">📍</div>
+            <div class="tl-content">
+              <div class="tl-time">Fri 1 May — 5:30 PM</div>
+              <div class="tl-desc">Arrive at Malham Showfield for bib collection</div>
+              <div class="tl-note">Registration closes at 9:00 PM. No tracker yet — that's race morning only.</div>
+            </div>
+          </div>
+          <div class="tl-item warn">
+            <div class="tl-dot">🌙</div>
+            <div class="tl-content">
+              <div class="tl-time">Fri 1 May — overnight</div>
+              <div class="tl-desc">Vehicles permitted to park on showground from 5:30 PM</div>
+              <div class="tl-note">No tents at the showground. Use local campsites if needed.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">⏰</div>
+            <div class="tl-content">
+              <div class="tl-time">Sat 2 May — 4:15 AM</div>
+              <div class="tl-desc">Registration opens — bib + tracker collection</div>
+              <div class="tl-note">Bring photo ID. Tracker only available race morning.</div>
+            </div>
+          </div>
+          <div class="tl-item warn">
+            <div class="tl-dot">🚦</div>
+            <div class="tl-content">
+              <div class="tl-time">Sat 2 May — 5:30 AM</div>
+              <div class="tl-desc">Registration closes. Vehicle access prohibited 5:30–6:15 AM.</div>
+              <div class="tl-note">Do not arrive after this time expecting full registration.</div>
+            </div>
+          </div>
+          <div class="tl-item green">
+            <div class="tl-dot">🏁</div>
+            <div class="tl-content">
+              <div class="tl-time">Sat 2 May — 6:00 AM</div>
+              <div class="tl-desc">Mass start — Malham Showfield</div>
+              <div class="tl-note">Chapel Gate, Malham, BD23 4DG</div>
+            </div>
+          </div>
+          <div class="tl-item green">
+            <div class="tl-dot">🎖</div>
+            <div class="tl-content">
+              <div class="tl-time">Sat 2 May — by Midnight</div>
+              <div class="tl-desc">Race cutoff — finish line at Malham Showfield</div>
+              <div class="tl-note">18-hour overall cutoff. All finishers get a medal.</div>
+            </div>
+          </div>
+          <div class="tl-item warn">
+            <div class="tl-dot">🚗</div>
+            <div class="tl-content">
+              <div class="tl-time">Sun 3 May — by 8:00 AM</div>
+              <div class="tl-desc">All vehicles must be removed from showground</div>
+              <div class="tl-note"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Start & Finish -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">📍</span>
+          <h2>Start & Finish</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <p>Both start and finish are at the same location:</p>
+        <div class="alert info" style="margin-top:12px;">
+          <strong>Malham Showfield</strong><br>
+          Chapel Gate, Malham, Yorkshire Dales National Park<br>
+          <strong>BD23 4DH</strong> (for sat nav)
+        </div>
+        <p>Start: <strong>6:00 AM Saturday 2nd May</strong> — mass start, all runners together.</p>
+        <p>The finish has chip timing. Your chip is on the back of your bib. There will also be someone manually recording finish times as backup.</p>
+        <p>Once you cross the finish line: return your GPS tracker to the event team.</p>
+        <div class="alert success">
+          Hot drinks, TrueStart coffee, and an ERDINGER Alkoholfrei (non-alcoholic beer) wait for you at the finish line.
+        </div>
+      </div>
+    </div>
+
+    <!-- Checkpoints -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🏔</span>
+          <h2>Checkpoints & Cutoffs</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="alert warn">
+          Cutoffs are strictly enforced. Arrive before the time or you are withdrawn. You can stay up to 20 min past cutoff but must exit within that window.
+        </div>
+        <table class="cp-table">
+          <thead>
+            <tr>
+              <th>Checkpoint</th>
+              <th>Distance</th>
+              <th>Cutoff</th>
+              <th>Location</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="cp-name">CP1</div>
+                <div class="no-crew">⛔ No supporters</div>
+              </td>
+              <td>12 mi</td>
+              <td class="cutoff">10:19 AM</td>
+              <td>Silverdale Road<br><small>BD24 9PW</small></td>
+            </tr>
+            <tr>
+              <td><div class="cp-name">CP2</div></td>
+              <td>21 mi</td>
+              <td class="cutoff">1:33 PM</td>
+              <td>Ribblehead Viaduct<br><small>Gauber Rd / Blea Moor Rd</small></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="cp-name">CP3</div>
+                <div class="no-crew">⛔ No supporters</div>
+              </td>
+              <td>27 mi</td>
+              <td class="cutoff">3:43 PM</td>
+              <td>Philpin Farm Campsite<br><small>Chapel-le-Dale</small></td>
+            </tr>
+            <tr>
+              <td><div class="cp-name">CP4</div></td>
+              <td>34.5 mi</td>
+              <td class="cutoff">6:25 PM</td>
+              <td>Horton in Ribblesdale<br><small>Playing Field, BD24 0HF</small></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="cp-name">CP5</div>
+                <div class="no-crew">⛔ No supporters</div>
+              </td>
+              <td>38 mi</td>
+              <td class="cutoff">7:40 PM</td>
+              <td>Silverdale Road<br><small>BD24 9PW</small></td>
+            </tr>
+            <tr>
+              <td><div class="cp-name">Finish</div></td>
+              <td>52 mi</td>
+              <td class="cutoff">Midnight</td>
+              <td>Malham Showfield<br><small>BD23 4DH</small></td>
+            </tr>
+          </tbody>
+        </table>
+        <p>CPs have food (sandwiches, snacks), water, cola, vegan options, and pre-mixed Tailwind (Mandarin Orange). CPs also have a medic or first aider. CP1 is water only.</p>
+        <div class="alert danger">
+          <strong>Cupless event.</strong> Bring your own cup or buy a GB Ultras Speed Cup at registration.
+        </div>
+      </div>
+    </div>
+
+    <!-- Route -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🗺</span>
+          <h2>Route Overview</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <p>Starts at Malham Showground. A looped route through the Yorkshire Dales:</p>
+        <ol>
+          <li>Malham → Malham Cove → Dry Valley of Watlowes</li>
+          <li>Malham Tarn → Fountains Fell → base of Pen-y-Ghent</li>
+          <li>Joins the Yorkshire 3 Peaks trail: <strong>Pen-y-Ghent → Whernside → Ingleborough</strong></li>
+          <li>Back across Fountains Fell and Malham Tarn</li>
+          <li>Back to Malham Cove → turn left at the limestone pavement → Gordale</li>
+          <li>Drop down via Janet's Foss → finish at Malham Showground</li>
+        </ol>
+        <div class="alert info">
+          Route is largely unmarked. Follow GPX on your device. Download the latest GPX from the GB Ultras website before race day.
+        </div>
+        <p>Only the first section from the showground to Malham Cove has laminated signs and biodegradable red tape.</p>
+      </div>
+    </div>
+
+    <!-- Registration -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">📋</span>
+          <h2>Registration</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <p><strong>Location:</strong> Malham Showfield, Chapel Gate, Malham, BD23 4DG</p>
+        <p><strong>Friday 1st May:</strong> 5:30 PM – 9:00 PM — bib number only</p>
+        <p><strong>Saturday 2nd May:</strong> 4:15 AM – 5:30 AM — bib number + tracker</p>
+        <div class="alert warn">
+          Bring photo ID with your full name. Tracker is only available race morning — can't pick it up Friday.
+        </div>
+        <p>If you arrive after 5:30 AM on race day you can still register but no extra time will be added to your cutoffs.</p>
+      </div>
+    </div>
+
+    <!-- Parking -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🅿</span>
+          <h2>Parking & Getting There</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <p><strong>Drop-off:</strong> Supporters can drop you at the showground entrance between 4:15 AM and 5:15 AM. After that, they must park at the Yorkshire Dales Visitor Centre car park (short drive away).</p>
+        <p><strong>Vehicle access is blocked 5:30–6:15 AM</strong> on race morning to allow the event team to head out to checkpoints.</p>
+        <p><strong>Parking on showground:</strong> Participants only. Traffic marshals will guide you. Once full, overflow to National Trust Car Park behind Visitor Centre (parking charges apply there).</p>
+        <p><strong>Overnight parking:</strong> Permitted from 5:30 PM Friday. All vehicles must leave by 8:00 AM Sunday.</p>
+        <div class="alert info">
+          No fires or barbeques on the showground. No tents — book a local campsite if needed.
+        </div>
+      </div>
+    </div>
+
+    <!-- Tracker -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">📡</span>
+          <h2>GPS Tracker</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <p>Collected at registration on race morning only. Already activated when handed to you — nothing to set up.</p>
+        <ul>
+          <li>Attach it to the <strong>outside</strong> of your pack/shoulder strap, velcro provided</li>
+          <li>Must have line of sight to the sky — <strong>do not put it inside your bag</strong></li>
+          <li>Keep it in the waterproof sealed bag — lost/damaged tracker charged at £150 + VAT</li>
+          <li>Return it to event team when you finish (or if you drop out)</li>
+        </ul>
+        <p>Updates every ~2 minutes. Signal can be patchy in parts of the Dales — a flashing ! icon means no signal, not that you've gone off-course.</p>
+        <div class="alert success">
+          Family can follow your live position via the race tracking link on the GB Ultras website. Goes live at 6 AM.
+        </div>
+        <div class="alert danger">
+          There is an <strong>SOS button</strong> on the front of the tracker. Hold for ~3 seconds in a life-threatening emergency. This is not as effective as calling Race HQ directly.
+        </div>
+      </div>
+    </div>
+
+    <!-- Mandatory Kit -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🎒</span>
+          <h2>Mandatory Kit</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="alert danger">
+          Random kit checks at registration, during the race, and at the finish. Missing items = time penalty or disqualification.
+        </div>
+        <div class="kit-grid">
+          <div class="kit-item"><div class="dot"></div>Waterproof jacket (sealed seams, min 10,000mm)</div>
+          <div class="kit-item"><div class="dot"></div>Long sleeve base layer (dry bag, separate from start kit)</div>
+          <div class="kit-item"><div class="dot"></div>Water bottle or bladder (min 1 litre)</div>
+          <div class="kit-item"><div class="dot"></div>Fully charged phone (Race HQ + RD numbers saved)</div>
+          <div class="kit-item"><div class="dot"></div>Emergency blanket (foil)</div>
+          <div class="kit-item"><div class="dot"></div>Head/chest torch — min 75 lumens</div>
+          <div class="kit-item"><div class="dot"></div>Whistle</div>
+          <div class="kit-item"><div class="dot"></div>Secondary torch — min 25 lumens (not your phone)</div>
+          <div class="kit-item"><div class="dot"></div>GPS Tracker (collected at registration)</div>
+          <div class="kit-item"><div class="dot"></div>Emergency rations — min 500 calories</div>
+        </div>
+        <p style="margin-top:16px; color:var(--muted); font-size:13px;">Also recommended: electrolytes, compass, OS Map OL2, hat & gloves, sun protection, first aid kit, cup.</p>
+        <div class="alert warn">
+          Watch the mandatory kit video (available from Wed 15th April) before race day.
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Rules -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">📌</span>
+          <h2>Key Rules to Remember</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <ul>
+          <li>Bib number on your <strong>front</strong> at all times — visible, not folded</li>
+          <li>Must check in at every checkpoint (team writes your bib number + time)</li>
+          <li>No pacers or support runners at any point</li>
+          <li>No running with a dog</li>
+          <li><strong>No ibuprofen</strong> — disqualification if found taking it</li>
+          <li>No drones unless you're GB Ultras media team</li>
+          <li>Close all gates behind you regardless of who's behind you</li>
+          <li>No cups provided — bring your own</li>
+          <li>Supporters cannot attend CP1, CP3, or CP5 — time penalty/DQ risk</li>
+          <li>No music through speakers (headphones OK, use common sense at road crossings)</li>
+        </ul>
+        <div class="alert danger">
+          <strong>IBUPROFEN IS PROHIBITED.</strong> Use paracetamol or other approved pain relief instead.
+        </div>
+      </div>
+    </div>
+
+    <!-- Emergency Info -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🚨</span>
+          <h2>Emergency & Medical</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="alert danger">
+          In a life-threatening emergency — in this order:
+        </div>
+        <ol>
+          <li>Use thermal bag, spare clothing to stay warm</li>
+          <li>Press SOS button on tracker (hold ~3 seconds)</li>
+          <li>Call 999 — ask for Ambulance</li>
+          <li>Call Race HQ: <strong>07944 383383</strong></li>
+          <li>Race Directors: Laura Yates <strong>07523 163694</strong> / Wayne Drinkwater <strong>07701 349501</strong></li>
+          <li>Attract attention — shout, whistle, torch</li>
+        </ol>
+        <p>For non-emergencies: tell the marshals at the next checkpoint. They'll pass the message forward.</p>
+        <div class="alert warn">
+          Mobile signal is limited in parts of the Yorkshire Dales. If you can't get through, keep moving to higher ground or toward a checkpoint.
+        </div>
+        <p><strong>Key things to watch:</strong> Stay hydrated with electrolytes (not just water). If urine goes dark brown, that's a medical issue — get to a checkpoint. Watch for signs of hypothermia: confusion, extreme tiredness, disorientation.</p>
+      </div>
+    </div>
+
+    <!-- Medals -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🏅</span>
+          <h2>Finisher Medals</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <ul>
+          <li><strong style="color:#f5c842;">Gold</strong> — Top 200 finishers</li>
+          <li><strong style="color:#aaa;">Silver</strong> — Finishers 201–400</li>
+          <li><strong style="color:#cd7f32;">Bronze</strong> — Finishers 401+</li>
+        </ul>
+        <p>Everyone who finishes within the cutoff gets a medal. Trophies for top 3 male and top 3 female.</p>
+        <p>Results go live during the race and are chip-timed. Final results submitted to ITRA, UTMB, and DUV.</p>
+      </div>
+    </div>
+
+  </div><!-- end tab-me -->
+
+  <!-- MY PLAN TAB -->
+  <div id="tab-plan" class="tab-panel">
+
+    <div class="quick-facts">
+      <div class="fact">
+        <div class="label">Target</div>
+        <div class="value green">12 hrs</div>
+      </div>
+      <div class="fact">
+        <div class="label">Target Finish</div>
+        <div class="value">6:00 PM</div>
+      </div>
+      <div class="fact">
+        <div class="label">Drive There</div>
+        <div class="value">Solo</div>
+      </div>
+      <div class="fact">
+        <div class="label">Drive Home</div>
+        <div class="value warn">Martina</div>
+      </div>
+    </div>
+
+    <!-- Logistics -->
+    <div class="section open">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🚗</span>
+          <h2>Logistics</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot">🌙</div>
+            <div class="tl-content">
+              <div class="tl-time">Fri night / Sat ~5:00 AM</div>
+              <div class="tl-desc">Drive to Malham Showfield — arrive ~5:00 AM</div>
+              <div class="tl-note">Registration + tracker collection: 4:15–5:30 AM. Driving solo.</div>
+            </div>
+          </div>
+          <div class="tl-item green">
+            <div class="tl-dot">🏁</div>
+            <div class="tl-content">
+              <div class="tl-time">Sat 6:00 AM</div>
+              <div class="tl-desc">Race starts — Martina and kids drive up later</div>
+              <div class="tl-note">They aim to be at CP2 (Ribblehead Viaduct) before ~11:00 AM.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">🎖</div>
+            <div class="tl-content">
+              <div class="tl-time">Sat ~6:00 PM</div>
+              <div class="tl-desc">Finish line — Malham Showfield</div>
+              <div class="tl-note">Martina meets you here. Change clothes, eat something, recover.</div>
+            </div>
+          </div>
+          <div class="tl-item warn">
+            <div class="tl-dot">🚗</div>
+            <div class="tl-content">
+              <div class="tl-time">Sat evening</div>
+              <div class="tl-desc">Martina drives everyone home</div>
+              <div class="tl-note">No overnight stay planned.</div>
+            </div>
+          </div>
+          <div class="tl-item green">
+            <div class="tl-dot">♨️</div>
+            <div class="tl-content">
+              <div class="tl-time">Sun 3rd May</div>
+              <div class="tl-desc">Spa day — to be booked</div>
+              <div class="tl-note">Reward for surviving 52 miles.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert info" style="margin-top:4px;">
+          <strong>Finish bag for Martina to bring:</strong> dry clothes, warm blanket, water, and something you like to eat.
+        </div>
+      </div>
+    </div>
+
+    <!-- Target Times -->
+    <div class="section open">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">⏱</span>
+          <h2>Target Times</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <p>Calculated by MyRaceCard using Naismith's rule on the GPX, scaled to a 12-hour finish.</p>
+        <table class="cp-table" style="margin-top:12px;">
+          <thead>
+            <tr>
+              <th>Checkpoint</th>
+              <th>Distance</th>
+              <th>Target Arrival</th>
+              <th>Cutoff</th>
+              <th>Buffer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><div class="cp-name">Start</div></td>
+              <td>0 mi</td>
+              <td><strong>6:00 AM</strong></td>
+              <td>—</td>
+              <td>—</td>
+            </tr>
+            <tr>
+              <td><div class="cp-name">CP1</div></td>
+              <td>12 mi</td>
+              <td><strong>8:52 AM</strong></td>
+              <td class="cutoff">10:19 AM</td>
+              <td style="color:var(--accent2);">+1h 27m</td>
+            </tr>
+            <tr>
+              <td><div class="cp-name">CP2</div></td>
+              <td>21 mi</td>
+              <td><strong>10:57 AM</strong></td>
+              <td class="cutoff">1:33 PM</td>
+              <td style="color:var(--accent2);">+2h 36m</td>
+            </tr>
+            <tr>
+              <td><div class="cp-name">CP3</div></td>
+              <td>27 mi</td>
+              <td><strong>12:39 PM</strong></td>
+              <td class="cutoff">3:43 PM</td>
+              <td style="color:var(--accent2);">+3h 04m</td>
+            </tr>
+            <tr>
+              <td><div class="cp-name">CP4</div></td>
+              <td>34.5 mi</td>
+              <td><strong>2:31 PM</strong></td>
+              <td class="cutoff">6:25 PM</td>
+              <td style="color:var(--accent2);">+3h 54m</td>
+            </tr>
+            <tr>
+              <td><div class="cp-name">CP5</div></td>
+              <td>38 mi</td>
+              <td><strong>2:47 PM</strong></td>
+              <td class="cutoff">7:40 PM</td>
+              <td style="color:var(--accent2);">+4h 53m</td>
+            </tr>
+            <tr>
+              <td><div class="cp-name">Finish</div></td>
+              <td>52 mi</td>
+              <td><strong style="color:var(--accent2);">6:00 PM</strong></td>
+              <td class="cutoff">Midnight</td>
+              <td style="color:var(--accent2);">+6h 00m</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="font-size:12px; color:var(--muted); margin-top:10px;">These are pace estimates — your actual times will vary with terrain, weather, and how you feel on the day. Cutoffs are generous if you're on target.</p>
+      </div>
+    </div>
+
+    <!-- Nutrition -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🍌</span>
+          <h2>Nutrition</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="alert info">
+          Notes to fill in closer to race day.
+        </div>
+        <ul>
+          <li>What to eat/drink between checkpoints</li>
+          <li>How often to take gels or real food</li>
+          <li>Electrolyte strategy (mandatory — don't just drink water)</li>
+          <li>Anything to avoid during the race</li>
+          <li>What to eat at each CP</li>
+        </ul>
+        <p style="color:var(--muted); font-size:13px; margin-top:12px;">All CPs (except CP1) have sandwiches, snacks, cola, water, and pre-mixed Tailwind. Vegan options available.</p>
+      </div>
+    </div>
+
+    <!-- Race Notes -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">📝</span>
+          <h2>Race Notes</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="alert info">
+          Notes to fill in closer to race day.
+        </div>
+        <ul>
+          <li>Which sections to be conservative on (the 3 Peaks — don't burn out early)</li>
+          <li>Mental checkpoints — what to tell yourself if it gets hard</li>
+          <li>Gear changes or adjustments at any point</li>
+          <li>Anything from training that you want to remember</li>
+        </ul>
+      </div>
+    </div>
+
+  </div><!-- end tab-plan -->
+
+  <!-- MARTINA TAB -->
+  <div id="tab-her" class="tab-panel">
+
+    <div class="quick-facts">
+      <div class="fact">
+        <div class="label">Drive Up</div>
+        <div class="value">Sat morning</div>
+      </div>
+      <div class="fact">
+        <div class="label">Watch at</div>
+        <div class="value green">CP2 + Finish</div>
+      </div>
+      <div class="fact">
+        <div class="label">Drive Home</div>
+        <div class="value warn">Martina drives</div>
+      </div>
+    </div>
+
+    <!-- When to Leave -->
+    <div class="section open">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🗓</span>
+          <h2>Plan for the Day</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot">🌅</div>
+            <div class="tl-content">
+              <div class="tl-time">Saturday morning — leave home</div>
+              <div class="tl-desc">Drive to Ribblehead Viaduct (CP2)</div>
+              <div class="tl-note">Allow enough time to arrive before ~10:30 AM to be safe.</div>
+            </div>
+          </div>
+          <div class="tl-item green">
+            <div class="tl-dot">👋</div>
+            <div class="tl-content">
+              <div class="tl-time">~10:30–11:15 AM</div>
+              <div class="tl-desc">See Fabricio at CP2 — Ribblehead Viaduct</div>
+              <div class="tl-note">Target arrival is ~11:00 AM. He'll be moving through — quick stop, not a long wait.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">🚗</div>
+            <div class="tl-content">
+              <div class="tl-time">After CP2</div>
+              <div class="tl-desc">Drive to Malham Showfield (finish line)</div>
+              <div class="tl-note">About 30 min drive. Explore Malham village, grab food, keep kids entertained.</div>
+            </div>
+          </div>
+          <div class="tl-item green">
+            <div class="tl-dot">🎖</div>
+            <div class="tl-content">
+              <div class="tl-time">~6:00 PM</div>
+              <div class="tl-desc">Fabricio crosses the finish line</div>
+              <div class="tl-note">Target is 6 PM but could be earlier or a bit later. Stay near the finish from ~5 PM.</div>
+            </div>
+          </div>
+          <div class="tl-item warn">
+            <div class="tl-dot">🚗</div>
+            <div class="tl-content">
+              <div class="tl-time">Sat evening</div>
+              <div class="tl-desc">Martina drives everyone home</div>
+              <div class="tl-note">Fabricio will be too wrecked to drive.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Where to go -->
+    <div class="section open">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">📍</span>
+          <h2>Where to Go</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="alert warn">
+          CP1, CP3 and CP5 are closed to supporters. Don't go there — it could mean a time penalty for Fabricio.
+        </div>
+
+        <p style="margin-top:14px;"><strong>CP2 — Ribblehead Viaduct</strong></p>
+        <p>As runners come up Gauber Road, crossing Blea Moor Road. One of the most scenic spots on the course.</p>
+        <div class="alert info">
+          Postcode area: near Ribblehead, North Yorkshire (BD24 0AA area). Use what3words or search "Ribblehead Viaduct" — it's well known.
+        </div>
+
+        <p style="margin-top:14px;"><strong>Finish — Malham Showfield</strong></p>
+        <p>Chapel Gate, Malham, BD23 4DH</p>
+        <p>Parking is available on the showground. There will be a finish line, hot drinks, and food for participants. Come prepared to wait — and bring the finish bag.</p>
+      </div>
+    </div>
+
+    <!-- Finish Bag -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🎒</span>
+          <h2>Finish Bag to Bring</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="kit-grid">
+          <div class="kit-item"><div class="dot"></div>Dry clothes (top, bottoms, socks)</div>
+          <div class="kit-item"><div class="dot"></div>Warm blanket</div>
+          <div class="kit-item"><div class="dot"></div>Water</div>
+          <div class="kit-item"><div class="dot"></div>Something he likes to eat</div>
+        </div>
+        <p style="font-size:13px; color:var(--muted); margin-top:12px;">The race provides a cold beer and hot drinks at the finish, but having familiar food and warm clothes waiting makes a big difference after 52 miles.</p>
+      </div>
+    </div>
+
+    <!-- Tracking -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">📡</span>
+          <h2>How to Track Him</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <p>Fabricio carries a GPS tracker throughout the race. You can follow his dot live on the GB Ultras tracking page — link goes live at 6:00 AM on race day.</p>
+        <p>Find the tracking link on the GB Ultras website under the 2026 Pennine Barrier race page.</p>
+        <div class="alert warn">
+          The tracker updates every ~2 minutes and can lose signal in parts of the Yorkshire Dales. If his dot stops moving or shows a flashing !, don't panic — it just means no phone signal in that area. It'll update again once he moves into coverage.
+        </div>
+        <div class="alert info">
+          Mobile signal is limited in some areas of the course. If you can't reach him by phone, check the tracker and trust the cutoff times in the Race Details tab.
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end tab-her -->
+
+  <script>
+    const TAB_ORDER = ['me', 'plan', 'her'];
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', TAB_ORDER[i] === tab);
+      });
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+    }
+
+    function toggleSection(header) {
+      header.parentElement.classList.toggle('open');
+    }
+  </script>
+
+</body>
+</html>
