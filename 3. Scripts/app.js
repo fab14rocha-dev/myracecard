@@ -539,7 +539,7 @@ function downloadCard() {
 
   function measureCardHeight(cp, isBeforeFinish) {
     const hasTime  = cp.arrivalMins != null;
-    const hasCutoff = !!(cutoffTimes[cp.cpNum ?? 'finish']);
+    const hasCutoff = cp.type !== 'start' && !!(cutoffTimes[cp.cpNum ?? 'finish']);
     // When cutoff shown side-by-side, reserve extra width on the right (42px col + 8px gap)
     const nameMaxW = hasTime ? (hasCutoff ? IW - CPX * 2 - 122 : IW - CPX * 2 - 72) : IW - CPX * 2;
     tmpCtx.font = '700 12px Inter, Arial, sans-serif';
@@ -605,7 +605,7 @@ function downloadCard() {
   if (targetFinishMins != null) {
     headerSub += `  ·  ${formatDuration(targetFinishMins - startMins)} target`;
   }
-  drawText(headerSub, W / 2, TOP_PAD - 40, '400 13px Inter, Arial, sans-serif', C.textMuted || '#4a5a8a', 'center');
+  drawText(headerSub, W / 2, TOP_PAD - 20, '400 13px Inter, Arial, sans-serif', C.textMuted || '#4a5a8a', 'center');
 
   // ── draw each card ────────────────────────────────────────────
   let curY = TOP_PAD;
@@ -642,7 +642,7 @@ function downloadCard() {
 
     // Time block (right-aligned) — only draw when a time exists
     const hasTime  = cp.arrivalMins != null;
-    const cpCutoff = cutoffTimes[cp.cpNum ?? 'finish'] || null;
+    const cpCutoff = cp.type !== 'start' ? (cutoffTimes[cp.cpNum ?? 'finish'] || null) : null;
     // When cutoff is present, draw TARGET and CUTOFF side-by-side (42px col + 8px gap)
     const CUTOFF_COL_W = 42;
     const COL_GAP = 8;
