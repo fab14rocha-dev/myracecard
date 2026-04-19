@@ -539,14 +539,15 @@ function downloadCard() {
 
   function measureCardHeight(cp, isBeforeFinish) {
     const hasTime  = cp.arrivalMins != null;
-    const nameMaxW = hasTime ? IW - CPX * 2 - 72 : IW - CPX * 2;
+    const hasCutoff = !!(cutoffTimes[cp.cpNum ?? 'finish']);
+    // When cutoff shown side-by-side, reserve extra width on the right (42px col + 8px gap)
+    const nameMaxW = hasTime ? (hasCutoff ? IW - CPX * 2 - 122 : IW - CPX * 2 - 72) : IW - CPX * 2;
     tmpCtx.font = '700 12px Inter, Arial, sans-serif';
     const nameLines = tmpCtx.measureText(cpName(cp)).width > nameMaxW ? 2 : 1;
     // Left side: label(9px) + 2px gap + name lines
     const leftH  = 10 + 2 + 14.4 * nameLines;
-    // Right side when time shown: time-lbl + time-val (+ cutoff lbl + cutoff-val if set)
-    const hasCutoff = !!(cutoffTimes[cp.cpNum ?? 'finish']);
-    const rightH = hasTime ? (9 + 2 + 17 + (hasCutoff ? 20 : 0)) : 0;
+    // Right side: cutoff is now side-by-side with target, so no extra height needed
+    const rightH = hasTime ? (9 + 2 + 17) : 0;
     const topH   = CPY + Math.max(leftH, rightH) + 4;
     const stats  = buildStats(cp, isBeforeFinish);
     const statH  = stats.length > 0 ? (6 + 9 + 13) : 0; // divider + lbl + val
@@ -642,15 +643,22 @@ function downloadCard() {
     // Time block (right-aligned) — only draw when a time exists
     const hasTime  = cp.arrivalMins != null;
     const cpCutoff = cutoffTimes[cp.cpNum ?? 'finish'] || null;
+    // When cutoff is present, draw TARGET and CUTOFF side-by-side (42px col + 8px gap)
+    const CUTOFF_COL_W = 42;
+    const COL_GAP = 8;
+    const targetRx = (hasTime && cpCutoff) ? rx - CUTOFF_COL_W - COL_GAP : rx;
     if (hasTime) {
       const timeLbl = cp.type === 'start' ? 'Start Time' : 'Target';
-      drawText(timeLbl.toUpperCase(), rx, iy, '400 8px Inter, Arial, sans-serif', C.textMuted, 'right');
+      drawText(timeLbl.toUpperCase(), targetRx, iy, '400 8px Inter, Arial, sans-serif', C.textMuted, 'right');
+    }
+    if (cpCutoff) {
+      drawText('CUTOFF', rx, iy, '400 7.5px Inter, Arial, sans-serif', C.textMuted, 'right');
     }
     iy += 11;
 
     // CP name (left side, may wrap)
     const name = cpName(cp);
-    const nameMaxW = hasTime ? IW - CPX * 2 - 72 : IW - CPX * 2;
+    const nameMaxW = hasTime ? (cpCutoff ? IW - CPX * 2 - 122 : IW - CPX * 2 - 72) : IW - CPX * 2;
     ctx.font = '700 12px Inter, Arial, sans-serif';
     const nameW = ctx.measureText(name).width;
     if (nameW > nameMaxW) {
@@ -673,14 +681,12 @@ function downloadCard() {
 
     // Time value (right-aligned, below time label)
     if (hasTime) {
-      drawText(formatTime(cp.arrivalMins), rx, curY + CPY + 11, '700 15px Inter, Arial, sans-serif', timeColor, 'right');
+      drawText(formatTime(cp.arrivalMins), targetRx, curY + CPY + 11, '700 15px Inter, Arial, sans-serif', timeColor, 'right');
     }
 
-    // Cutoff time (right-aligned, below target)
+    // Cutoff value — side-by-side with target, not below
     if (cpCutoff) {
-      const cutoffLblY = curY + CPY + 11 + 16;
-      drawText('CUTOFF', rx, cutoffLblY, '400 7.5px Inter, Arial, sans-serif', C.textMuted, 'right');
-      drawText(cpCutoff, rx, cutoffLblY + 10, '700 11px Inter, Arial, sans-serif', '#ef4444', 'right');
+      drawText(cpCutoff, rx, curY + CPY + 11, '700 13px Inter, Arial, sans-serif', '#ef4444', 'right');
     }
 
     iy += 4; // gap before stats
