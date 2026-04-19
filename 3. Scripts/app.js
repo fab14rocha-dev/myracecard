@@ -738,6 +738,10 @@ function downloadCard() {
   link.href = canvas.toDataURL('image/png');
   link.click();
 
+  if (typeof gtag === 'function') {
+    gtag('event', 'card_downloaded', { race_name: raceName || 'unnamed' });
+  }
+
   downloadBtn.textContent = '⬇ Download Image';
   downloadBtn.disabled = false;
 }

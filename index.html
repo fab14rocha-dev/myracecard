@@ -4,6 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MyRaceCard — Generate Your Race Plan</title>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-70VETRMG9H"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-70VETRMG9H');
+  </script>
   <style>
 @font-face {
   font-family: 'Inter';
@@ -1366,7 +1374,6 @@
         <input type="file" id="file-input" accept=".gpx" hidden>
       </div>
       <p class="upload-hint">Your GPX must include waypoints marking each checkpoint</p>
-      <p class="upload-stat"><span>125</span> race cards generated</p>
     </section>
 
     <!-- Step 1c: Checkpoint Selector (only shown if >6 checkpoints) -->
