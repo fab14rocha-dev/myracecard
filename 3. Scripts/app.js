@@ -1136,7 +1136,10 @@ fileInput.addEventListener('change', e => {
   if (e.target.files[0]) loadGPXFile(e.target.files[0]);
 });
 
-dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('click', e => {
+  if (e.target.closest('label')) return;
+  fileInput.click();
+});
 
 dropZone.addEventListener('dragover', e => {
   e.preventDefault();
