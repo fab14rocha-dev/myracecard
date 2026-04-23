@@ -729,7 +729,7 @@ function downloadCard() {
   });
 
   // Footer
-  drawText('Good luck · myracecard.uk', W / 2, curY + 6, '400 10px Inter, Arial, sans-serif', C.footer || C.textMuted, 'center');
+  drawText('Good luck · myracecard.co.uk', W / 2, curY + 6, '400 10px Inter, Arial, sans-serif', C.footer || C.textMuted, 'center');
 
   // Download
   const filename = `racecard-${(raceName || 'myrace').toLowerCase().replace(/\s+/g, '-')}.png`;
