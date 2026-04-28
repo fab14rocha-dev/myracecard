@@ -416,6 +416,7 @@
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('me')">Race Details</button>
     <button class="tab-btn" onclick="switchTab('plan')">My Plan</button>
+    <button class="tab-btn" onclick="switchTab('roan')">For Roan</button>
     <button class="tab-btn" onclick="switchTab('her')">For Martina</button>
   </div>
 
@@ -1024,6 +1025,120 @@
 
   </div><!-- end tab-plan -->
 
+  <!-- ROAN TAB -->
+  <div id="tab-roan" class="tab-panel">
+
+    <div class="quick-facts">
+      <div class="fact">
+        <div class="label">Leave Home</div>
+        <div class="value warn">3:15 AM</div>
+      </div>
+      <div class="fact">
+        <div class="label">Pick Up Fab</div>
+        <div class="value">3:35 AM</div>
+      </div>
+      <div class="fact">
+        <div class="label">Arrive Malham</div>
+        <div class="value green">~4:30 AM</div>
+      </div>
+      <div class="fact">
+        <div class="label">Your Job</div>
+        <div class="value">Drop off only</div>
+      </div>
+    </div>
+
+    <!-- Day Plan -->
+    <div class="section open">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">🗓</span>
+          <h2>Plan for Saturday Morning</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="timeline">
+          <div class="tl-item warn">
+            <div class="tl-dot">🌙</div>
+            <div class="tl-content">
+              <div class="tl-time">3:15 AM — Leave your house</div>
+              <div class="tl-desc">Head to Fabricio's at LS19 7YT</div>
+              <div class="tl-note">~20 min drive. Early, sorry.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">🚗</div>
+            <div class="tl-content">
+              <div class="tl-time">3:35 AM — Pick up Fabricio</div>
+              <div class="tl-desc">Depart together for Malham</div>
+              <div class="tl-note">~55 min drive via A65. Satnav: BD23 4DH</div>
+            </div>
+          </div>
+          <div class="tl-item green">
+            <div class="tl-dot">📍</div>
+            <div class="tl-content">
+              <div class="tl-time">~4:30 AM — Arrive Malham Showfield</div>
+              <div class="tl-desc">Drop Fabricio at the showground entrance</div>
+              <div class="tl-note">Registration opens at 4:15 AM. Arriving at 4:30 gives him a full hour before it closes at 5:30 — plenty of buffer.</div>
+            </div>
+          </div>
+          <div class="tl-item warn">
+            <div class="tl-dot">🏠</div>
+            <div class="tl-content">
+              <div class="tl-time">4:30–4:45 AM — Head home</div>
+              <div class="tl-desc">You're done — Martina takes it from here</div>
+              <div class="tl-note">Vehicle access is blocked 5:30–6:15 AM so leave before then. No need to stay.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Important Notes -->
+    <div class="section open">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">⚠️</span>
+          <h2>Important Notes</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <div class="alert danger">
+          <strong>Vehicle access is blocked 5:30–6:15 AM</strong> on race morning. Leave the showground before 5:30 AM — you won't be able to exit after that window opens.
+        </div>
+        <div class="alert warn">
+          Registration closes at 5:30 AM. Arriving at 4:30 AM gives Fabricio enough time. Please don't leave late.
+        </div>
+        <div class="alert info">
+          You're the drop-off. Martina will drive Fabricio home from the finish line later in the day. No need to wait around.
+        </div>
+      </div>
+    </div>
+
+    <!-- Getting There -->
+    <div class="section">
+      <div class="section-header" onclick="toggleSection(this)">
+        <div class="title-row">
+          <span class="icon">📍</span>
+          <h2>Getting There</h2>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="section-body">
+        <p>Pick up Fabricio from <strong>LS19 7YT</strong>, then drive straight to Malham Showfield.</p>
+        <div class="alert info">
+          <strong>Satnav address:</strong><br>
+          Malham Showfield, Chapel Gate, Malham<br>
+          <strong>BD23 4DH</strong>
+        </div>
+        <p>Route: A65 via Skipton is the most straightforward. About 55 minutes from LS19. Roads are clear at that hour.</p>
+        <p>Drop at the showground entrance — marshals will direct arriving vehicles. You won't need to park.</p>
+      </div>
+    </div>
+
+  </div><!-- end tab-roan -->
+
   <!-- MARTINA TAB -->
   <div id="tab-her" class="tab-panel">
 
@@ -1040,7 +1155,7 @@
       </div>
       <div class="fact">
         <div class="label">Watch at</div>
-        <div class="value green">CP2 + Finish</div>
+        <div class="value green">CP2, CP4 + Finish</div>
       </div>
       <div class="fact">
         <div class="label">Drive Home</div>
@@ -1078,9 +1193,25 @@
           <div class="tl-item">
             <div class="tl-dot">🚗</div>
             <div class="tl-content">
-              <div class="tl-time">After CP2</div>
-              <div class="tl-desc">Drive to Malham Showfield (finish line)</div>
-              <div class="tl-note">About 30 min drive. Explore Malham village, grab food, keep kids entertained.</div>
+              <div class="tl-time">After CP2 — drive to Horton in Ribblesdale</div>
+              <div class="tl-desc">About 15 min drive south. Grab food, find a spot, keep kids entertained.</div>
+              <div class="tl-note">You have ~3 hours before he arrives at CP4 — plenty of time.</div>
+            </div>
+          </div>
+          <div class="tl-item green">
+            <div class="tl-dot">👋</div>
+            <div class="tl-content">
+              <div class="tl-time">~2:15–2:45 PM</div>
+              <div class="tl-desc">See Fabricio at CP4 — Horton in Ribblesdale</div>
+              <div class="tl-note">Target arrival is ~2:31 PM. Playing Field, Horton in Ribblesdale, BD24 0HF.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot">🚗</div>
+            <div class="tl-content">
+              <div class="tl-time">After CP4 — drive to Malham Showfield</div>
+              <div class="tl-desc">About 25 min drive. Explore Malham village while you wait.</div>
+              <div class="tl-note">Aim to be at the finish from ~5:00 PM.</div>
             </div>
           </div>
           <div class="tl-item green">
@@ -1121,6 +1252,15 @@
         <p>As runners come up Gauber Road, crossing Blea Moor Road. One of the most scenic spots on the course.</p>
         <div class="alert info">
           Postcode area: near Ribblehead, North Yorkshire (BD24 0AA area). Use what3words or search "Ribblehead Viaduct" — it's well known.
+        </div>
+
+        <p style="margin-top:14px;"><strong>CP4 — Horton in Ribblesdale</strong></p>
+        <p>The playing field in the village. Fabricio is expected ~2:31 PM — aim to be there from ~2:15 PM.</p>
+        <div class="alert info">
+          Satnav: <strong>BD24 0HF</strong> — Horton in Ribblesdale Playing Field. About 15 min south of Ribblehead.
+        </div>
+        <div class="alert warn">
+          CP4 is open to supporters. CP1, CP3 and CP5 are not — don't go there.
         </div>
 
         <p style="margin-top:14px;"><strong>Finish — Malham Showfield</strong></p>
@@ -1173,7 +1313,7 @@
   </div><!-- end tab-her -->
 
   <script>
-    const TAB_ORDER = ['me', 'plan', 'her'];
+    const TAB_ORDER = ['me', 'plan', 'roan', 'her'];
     function switchTab(tab) {
       document.querySelectorAll('.tab-btn').forEach((btn, i) => {
         btn.classList.toggle('active', TAB_ORDER[i] === tab);
