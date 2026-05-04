@@ -1,0 +1,18 @@
+{
+  "name": "myracecard-video",
+  "version": "1.0.0",
+  "description": "MyRaceCard explainer video",
+  "remotion": {
+    "entryPoint": "src/Root.jsx"
+  },
+  "scripts": {
+    "start": "node node_modules/@remotion/cli/remotion-cli.js studio src/index.jsx",
+    "render": "node node_modules/@remotion/cli/remotion-cli.js render src/index.jsx Explainer out/explainer.mp4"
+  },
+  "dependencies": {
+    "@remotion/cli": "^4.0.450",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "remotion": "^4.0.450"
+  }
+}

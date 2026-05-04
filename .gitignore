@@ -2,3 +2,5 @@ node_modules/
 .DS_Store
 Thumbs.db
 4. Data/
+video/node_modules/
+video/out/
